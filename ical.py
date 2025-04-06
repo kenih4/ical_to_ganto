@@ -1,5 +1,6 @@
 #	python ical.py ical_setting.xlsx ical.xlsx
 
+
 #	ical.pywにする時、一番下の二行をコメントアウトする！
 #	webbrowser.open('http://saclaopr19.spring8.or.jp/~lognote/calendar/gantt-group-tasks-together.html')
 #	break
