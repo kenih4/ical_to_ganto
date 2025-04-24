@@ -1,6 +1,5 @@
 #	python ical.py ical_setting.xlsx ical.xlsx
 
-
 #	ical.pywにする時、一番下の二行をコメントアウトする！
 #	webbrowser.open('http://saclaopr19.spring8.or.jp/~lognote/calendar/gantt-group-tasks-together.html')
 #	break
@@ -552,8 +551,14 @@ while True:
         print('Sonzai')
 #		copy = 'C:/me/test.html'
         copy = '//saclaoprfs01.spring8.or.jp/log_note/calendar/gantt-group-tasks-together.html'
-        shutil.copyfile(src, copy)
+        
+        try:
+            shutil.copyfile(src, copy) #  //saclaoprfs01.spring8.or.jp　に繋がらないと落ちるのエラー処理入れた
 #        webbrowser.open('http://saclaopr19.spring8.or.jp/~lognote/calendar/gantt-group-tasks-together.html')
+            print("ログサーバーへコピー処理が完了しました。")
+        except Exception as e:
+            print(f"予期しないエラーが発生しました　: {e}")
+            print("たぶんログサーバーにアクセスできない。DOSで叩いてみて下さい「net use \\saclaoprfs01.spring8.or.jp /user:log_user4 ses@sacla5712」")
     else:
         print('Not Sonzai')
 
