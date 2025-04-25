@@ -11,9 +11,33 @@
 
 (function() {
     'use strict';
+    //ページを回転
     const b = document.body.style;
     b.transform = "rotate(90deg) scale(1.2)";
     b.position = "absolute";
     b.top = "370";
     b.left = "-200";
+
+    //時計表示
+    const div = document.createElement('div');
+    div.id = 'custom-clock';
+    div.style.position = 'fixed';
+    div.style.top = '750px';
+    div.style.right = '1250px';
+    div.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+    div.style.color = 'yellow';
+    div.style.padding = '10px';
+    div.style.fontSize = '16px';
+    div.style.fontFamily = 'monospace';
+    div.style.zIndex = 10000;
+    div.style.transform = 'rotate(270deg)';
+    document.body.appendChild(div);
+
+    function updateClock() {
+        const now = new Date();
+        div.textContent = now.toLocaleString('ja-JP');
+    }
+    updateClock();
+    setInterval(updateClock, 1500);
+
 })();
