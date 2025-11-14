@@ -1,5 +1,7 @@
 #	python ical.py ical_setting.xlsx ical.xlsx
-
+#   
+#   -u オプションを付けると「運転集計用に表示する範囲をユニットの開始終了にした」　が、ローカルに置いたHTMLファイルではブラウザ上でjavascriptを実行してくれる拡張機能「Tampermonky」が動いてくれない
+#   
 #	ical.pywにする時、一番下の二行をコメントアウトする！
 #	webbrowser.open('http://saclaopr19.spring8.or.jp/~lognote/calendar/gantt-group-tasks-together.html')
 #	break
@@ -27,6 +29,7 @@ import shutil
 
 import webbrowser
 import time
+import argparse
 
 """ Japanese"""
 import locale
@@ -36,19 +39,44 @@ print(dt.strftime('%A, %a, %B, %b'))
 locale.setlocale(locale.LC_TIME, 'ja_JP.UTF-8')
 print(locale.getlocale(locale.LC_TIME))
 print(dt.strftime('%A, %a, %B, %b'))
-"""------"""
 
 
+##################################################
+parser = argparse.ArgumentParser(description='ファイル処理のプログラム。')
+# 2. 引数の追加
+# 位置引数 (必須)
+parser.add_argument('config_file_setting', 
+                    help='入力として使用するファイルパスを指定します。')
+parser.add_argument('config_file_sig', 
+                    help='入力として使用するファイルパスを指定します。')
+parser.add_argument('-v', '--verbose', 
+                    action='store_true', 
+                    help='詳細な処理情報を出力します。')
+parser.add_argument('-u', '--unten', 
+                    action='store_true', 
+                    help='運転集計用に、出力するユニットの期間を表示します。')
+parser.add_argument('--limit', 
+                    type=int, 
+                    default=10, 
+                    help='テスト')
+args = parser.parse_args()
+if args.verbose:
+    print("✅ 詳細モード (verbose) が有効です。")
+else:
+    print("❌ 標準モードで実行します。")
+if args.unten:
+    print("✅ 運転集計モード (unten) が有効です。")
+else:
+    print("❌ 標準モードで実行します。")    
+print(f"📘 入力ファイル1: {args.config_file_setting}")
+print(f"📘 入力ファイル2: {args.config_file_sig}")
+print(f"🔢 処理制限数: {args.limit}")
+##################################################
 
-args = sys.argv
-print("arg1:" + args[1])
-config_file_setting = args[1]
-config_file_sig = args[2]
-
-df_set = pd.read_excel(config_file_setting,
+df_set = pd.read_excel(args.config_file_setting,
                        sheet_name="setting", header=None, index_col=0)
 # print(df_set)
-df_sig = pd.read_excel(config_file_sig, sheet_name="sig")
+df_sig = pd.read_excel(args.config_file_sig, sheet_name="sig")
 # print(df_sig)
 
 
@@ -99,10 +127,24 @@ JST = datetime.timezone(datetime.timedelta(hours=+9), 'JST')
 while True:
 
     now = datetime.datetime.now()
-#    sta = now + datetime.timedelta(days=-5)
-#    sto = now + datetime.timedelta(days=21)
-    sta = now + datetime.timedelta(days=-3)
-    sto = now + datetime.timedelta(days=23)
+
+    if args.unten:
+        print("✅ 運転集計モード (unten) が有効です。")
+        with open(r"C:\me\unten\OperationSummary\dt_beg.txt", mode='r', encoding="UTF-8") as f:
+            buff_dt_beg = f.read()
+        with open(r"C:\me\unten\OperationSummary\dt_end.txt", mode='r', encoding="UTF-8") as f:
+            buff_dt_end = f.read()            
+        sta = datetime.datetime.strptime(buff_dt_beg, "%Y/%m/%d %H:%M")
+        sta = sta +  datetime.timedelta(days=-3)        
+        sto = datetime.datetime.strptime(buff_dt_end, "%Y/%m/%d %H:%M")
+        sto = sto +  datetime.timedelta(days=3)
+    else:
+        print("❌ 標準モードで実行します。")
+        sta = now + datetime.timedelta(days=-3)
+        sto = now + datetime.timedelta(days=23)        
+
+
+
 
     df = []
     annots = []
@@ -543,18 +585,15 @@ while True:
 	"""
     plotly.offline.plot(
         fig, filename='gantt-group-tasks-together.html', auto_open=False)
-
+    
     print('### Updated END	###  ')
 
-    src = 'C:\me\ical_to_ganto\gantt-group-tasks-together.html'
+    src='C:\me\ical_to_ganto\gantt-group-tasks-together.html'
     if os.path.isfile(src):
         print('Sonzai')
-#		copy = 'C:/me/test.html'
-        copy = '//saclaoprfs01.spring8.or.jp/log_note/calendar/gantt-group-tasks-together.html'
-        
+        copy = '//saclaoprfs01.spring8.or.jp/log_note/calendar/gantt-group-tasks-together.html'                    
         try:
-            shutil.copyfile(src, copy) #  //saclaoprfs01.spring8.or.jp　に繋がらないと落ちるのエラー処理入れた
-#        webbrowser.open('http://saclaopr19.spring8.or.jp/~lognote/calendar/gantt-group-tasks-together.html')
+            shutil.copyfile(src, copy) #  //saclaoprfs01.spring8.or.jp　に繋がらないと落ちるのエラー処理入れ サーバーsaclaoprfs01.spring8.or.jpへは書き込み権限のあるユーザーでログインしてる必要がある
             print("ログサーバーへコピーが完了しました。")
         except Exception as e:
             print(f"予期しないエラーが発生しました: {e}")
