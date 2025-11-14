@@ -1,10 +1,8 @@
 #	python ical.py ical_setting.xlsx ical.xlsx
 #   
-#   -u オプションを付けると「運転集計用に表示する範囲をユニットの開始終了にした」　が、ローカルに置いたHTMLファイルではブラウザ上でjavascriptを実行してくれる拡張機能「Tampermonky」が動いてくれない
+#   -u オプションを付けると「運転集計用に表示する範囲をユニットの開始終了にした」　が、ローカルに置いたHTMLファイルではブラウザ上でjavascriptを実行してくれる拡張機能「Tampermonky」が動いてくれないので、画像にしてから回転させる処理を入れた。
 #   
 #	ical.pywにする時、一番下の二行をコメントアウトする！
-#	webbrowser.open('http://saclaopr19.spring8.or.jp/~lognote/calendar/gantt-group-tasks-together.html')
-#	break
 
 # Formatter     Shift+Alt+F
 
@@ -129,22 +127,19 @@ while True:
     now = datetime.datetime.now()
 
     if args.unten:
-        print("✅ 運転集計モード (unten) が有効です。")
+        print("✅ untenモードが有効です。")
         with open(r"C:\me\unten\OperationSummary\dt_beg.txt", mode='r', encoding="UTF-8") as f:
             buff_dt_beg = f.read()
         with open(r"C:\me\unten\OperationSummary\dt_end.txt", mode='r', encoding="UTF-8") as f:
-            buff_dt_end = f.read()            
+            buff_dt_end = f.read()
         sta = datetime.datetime.strptime(buff_dt_beg, "%Y/%m/%d %H:%M")
-        sta = sta +  datetime.timedelta(days=-3)        
+        sta = sta +  datetime.timedelta(days=-2)        
         sto = datetime.datetime.strptime(buff_dt_end, "%Y/%m/%d %H:%M")
-        sto = sto +  datetime.timedelta(days=3)
+        sto = sto +  datetime.timedelta(days=2)
     else:
         print("❌ 標準モードで実行します。")
         sta = now + datetime.timedelta(days=-3)
         sto = now + datetime.timedelta(days=23)        
-
-
-
 
     df = []
     annots = []
@@ -546,6 +541,11 @@ while True:
 #        dict(type='line', yref='paper', y0=0, y1=1, xref='x', x0=now, x1=now,
 #             fillcolor="greenyellow", opacity=0.5, line=dict(color="yellow", width=5, dash="dot")),
 
+        dict(type='line', yref='paper', y0=-0.01, y1=1.01, xref='x', x0=next+datetime.timedelta(weeks=0, days=-21, hours=0, minutes=0, seconds=0, milliseconds=0, microseconds=0), x1=next +
+             datetime.timedelta(weeks=0, days=-21, hours=0, minutes=0, seconds=0, milliseconds=0, microseconds=0), fillcolor="greenyellow", opacity=1.0, line=dict(color="yellow", width=3, dash="solid")),
+        dict(type='line', yref='paper', y0=-0.01, y1=1.01, xref='x', x0=next+datetime.timedelta(weeks=0, days=-14, hours=0, minutes=0, seconds=0, milliseconds=0, microseconds=0), x1=next +
+             datetime.timedelta(weeks=0, days=-14, hours=0, minutes=0, seconds=0, milliseconds=0, microseconds=0), fillcolor="greenyellow", opacity=1.0, line=dict(color="yellow", width=3, dash="solid")),
+
         dict(type='line', yref='paper', y0=-0.01, y1=1.01, xref='x', x0=next+datetime.timedelta(weeks=0, days=-7, hours=0, minutes=0, seconds=0, milliseconds=0, microseconds=0), x1=next +
              datetime.timedelta(weeks=0, days=-7, hours=0, minutes=0, seconds=0, milliseconds=0, microseconds=0), fillcolor="greenyellow", opacity=1.0, line=dict(color="yellow", width=3, dash="solid")),
         dict(type='line', yref='paper', y0=-0.01, y1=1.01, xref='x', x0=next, x1=next,
@@ -586,6 +586,23 @@ while True:
     plotly.offline.plot(
         fig, filename='gantt-group-tasks-together.html', auto_open=False)
     
+    if args.unten:
+        print('<<< 画像表示中...    ', end="")
+        import plotly.io as pio # plotly.ioモジュールをインポート   回転させたいがブラウザだと難しいので一旦画像にしてPILで回転させる
+        from PIL import Image
+        output_image_path = 'gantt_chart.png'
+        pio.write_image(fig, output_image_path, format='png', scale=1) # scale解像度
+        try:
+            with Image.open(output_image_path) as img:
+                rotated_img = img.transpose(Image.ROTATE_270)
+                rotated_img.show()
+        except FileNotFoundError:
+            print(f"エラー: '{output_image_path}' が見つかりません。Plotlyでの画像生成が成功したか確認してください。")
+        except Exception as e:
+            print(f"画像の回転中にエラーが発生しました: {e}")
+        print(' 完了 >>>')
+        os._exit(0)
+    
     print('### Updated END	###  ')
 
     src='C:\me\ical_to_ganto\gantt-group-tasks-together.html'
@@ -595,6 +612,14 @@ while True:
         try:
             shutil.copyfile(src, copy) #  //saclaoprfs01.spring8.or.jp　に繋がらないと落ちるのエラー処理入れ サーバーsaclaoprfs01.spring8.or.jpへは書き込み権限のあるユーザーでログインしてる必要がある
             print("ログサーバーへコピーが完了しました。")
+            """
+            try:
+                browser = webbrowser.get('C:/Program Files/Google/Chrome/Application/chrome.exe %s')
+                browser.open('http://saclaopr19.spring8.or.jp/~lognote/calendar/gantt-group-tasks-together.html', new=2) # new=2 は新しいタブまたはウィンドウで開くことを意味します
+            except webbrowser.Error:
+                print("Chromeブラウザが見つかりませんでした。デフォルトブラウザで開きます。")
+                webbrowser.open('gantt-group-tasks-together.html')
+            """          
         except Exception as e:
             print(f"予期しないエラーが発生しました: {e}")
             print("たぶんログサーバーにアクセスできない。DOSで叩いてみて下さい「net use \\saclaoprfs01.spring8.or.jp /user:log_user4 ses@sacla5712」")
