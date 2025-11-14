@@ -23,9 +23,9 @@
     div.id = 'custom-clock';
     div.style.position = 'fixed';
     div.style.top = '750px';
-    div.style.right = '1250px';
+    div.style.right = '1260px';
     div.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-    div.style.color = 'yellow';
+    div.style.color ='rgba(255, 255, 1, 0.8)';
     div.style.padding = '10px';
     div.style.fontSize = '16px';
     div.style.fontFamily = 'monospace';
