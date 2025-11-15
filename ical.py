@@ -292,7 +292,7 @@ while True:
                     d["Complete"] = n  # str(summary)
 
                     if str(df_sig.loc[n]['label']) == "運":
-                        colors[tmp_summary] = '#%02X%02X%02X' % (200,0,0) # 運は表示されない。ical.xlsxの下(SCSS+)の方から順に表示され、ギリギリ施設調整が見える
+                        colors[tmp_summary] = '#%02X%02X%02X' % (0,0,0) # 運は表示されない。ical.xlsxの下(SCSS+)の方から順に表示され、ギリギリ施設調整が見える
                     elif str(df_sig.loc[n]['label']) == "リング":
                         colors[tmp_summary] =   '#%02X%02X%02X' % (130,130,130)
                     elif str(df_sig.loc[n]['label']) == "施設調整":
@@ -510,8 +510,7 @@ while True:
 	"""
 
 
-    shiftNum = 0 - now.weekday() 	#月曜日が0で日曜日が6	0は目標とする曜日でMondya曜日の意味。
-#    shiftNum = 1 - now.weekday()  # 月曜日が0で日曜日が6	1は目標とする曜日でTuesday曜日の意味。
+    shiftNum = -1 - now.weekday() 	#月曜日が0で日曜日が6	0は目標とする曜日でMondya曜日の意味。 なぜか-1しないといけない。。
     print('now.weekday()   ' + str(now.weekday()))
     print('shiftNum   ' + str(shiftNum))
     shiftNum = shiftNum+7 if shiftNum < 0 else shiftNum
