@@ -1,4 +1,4 @@
-#	python ical.py ical_setting.xlsx ical.xlsx
+#	python ical.py ical_setting.xlsx ical_SHISETUCHOUSEI.xlsx
 #   
 #   -u オプションを付けると「運転集計用に表示する範囲をユニットの開始終了にした」　が、ローカルに置いたHTMLファイルではブラウザ上でjavascriptを実行してくれる拡張機能「Tampermonky」が動いてくれないので、画像にしてから回転させる処理を入れた。
 #   
@@ -133,7 +133,7 @@ while True:
         with open(r"C:\me\unten\OperationSummary\dt_end.txt", mode='r', encoding="UTF-8") as f:
             buff_dt_end = f.read()
         sta = datetime.datetime.strptime(buff_dt_beg, "%Y/%m/%d %H:%M")
-        sta = sta +  datetime.timedelta(days=-2)        
+        sta = sta +  datetime.timedelta(days=-1)        
         sto = datetime.datetime.strptime(buff_dt_end, "%Y/%m/%d %H:%M")
         sto = sto +  datetime.timedelta(days=2)
     else:
@@ -199,10 +199,9 @@ while True:
 #		            if Hdt_N < 1:	#  12時間（1シフト分）より短い期間だったら文字サイズを小さくする
 #		                charsize=  charsize * Hdt_N
 
-                    print('start_dt	' + str(start_dt))
-                    print('end_dt	' + str(end_dt))
-                    print('Hdt_N	' + str(Hdt_N))
-
+#                    print('start_dt	' + str(start_dt))
+#                    print('end_dt	' + str(end_dt))
+ #                   print('Hdt_N	' + str(Hdt_N))
 
                     Mojisu = 17  # ＊文字以上なら改行する　Default
 
@@ -271,14 +270,8 @@ while True:
                     if charsize < 1:
                         charsize = 1
 
-                    """
-		            if len(tmp_summary) > 30:	#100文字以上なら文字を小さく
-		                charsize=  charsize * 0.5
-		                tmp_summary = '<b>' + tmp_summary + '</b>'
-		            """
-
                     if "BL" in tmp_summary:
-                        print("DUMMY :	"+tmp_summary)
+                        print("", end="")
 #                        tmp_summary = '<span style="font-family:游明朝 Medium; color: ' + str(str(df_sig.loc[n]['annote_color']).replace("1", "").strip().splitlines()[0]) + ';text-decoration: blink;      text-shadow: 0px 0px 2px #000">' + tmp_summary + '</span>'
                     elif "加速器調整" in tmp_summary:
                         charsize = 21
@@ -295,8 +288,7 @@ while True:
                         print("DUMMY :	"+tmp_summary)
 #                        tmp_summary = '<span style="font-family:游明朝 Medium; color: ' + str(str(df_sig.loc[n]['annote_color']).replace("1", "").strip().splitlines()[0]) + ';text-decoration: blink;      text-shadow: 0px 0px 2px #000">' + tmp_summary + '</span>'
 
-                    print(str(start_dt) + " ~ " +
-                          str(end_dt) + " :	" + tmp_summary)
+                    print(str(start_dt) + " ~ " + str(end_dt) + " :	" + tmp_summary)
                     d["Resource"] = tmp_summary
                     d["Complete"] = n  # str(summary)
 
@@ -305,25 +297,24 @@ while True:
                         colors[tmp_summary] = '#%02X%02X%02X' % (random.randint(50, 50), random.randint(10, 10), 255)
                     elif "BL調整" in tmp_summary:
                         colors[tmp_summary] = '#%02X%02X%02X' % (random.randint(50, 50), random.randint(50, 50), 255)
-#                        colors[tmp_summary] = '#%02X%02X%02X' % (random.randint(50, 50), random.randint(120, 120), 255)
                     elif "加速器調整" in tmp_summary:
-                        colors[tmp_summary] = '#%02X%02X%02X' % (130, 130, 130)  # '#%02X%02X%02X' % (100, 100, 100)
+                        colors[tmp_summary] = '#%02X%02X%02X' % (130, 130, 130)
                     elif str(df_sig.loc[n]['label']) == "運":
                         colors[tmp_summary] = '#%02X%02X%02X' % (0,0,0)
                     elif str(df_sig.loc[n]['label']) == "リング":
                         colors[tmp_summary] = '#%02X%02X%02X' % (130,130,130)
+                    elif str(df_sig.loc[n]['label']) == "施設調整":
+                        colors[tmp_summary] = '#%02X%02X%02X' % (55,127,200)#(255,127,80) #色指定したけど変わらず、とういうか色が付かない。そういえば運転責任者も色が付かない。なんか設定があるんだっけ？？
                     else:  # User
                         # colors[tmp_summary] = '#%02X%02X%02X' % (255, random.randint(0, 10), random.randint(0, 10))
                         colors[tmp_summary] = '#%02X%02X%02X' % (
                             205, random.randint(1, 1), random.randint(7, 7))
 
-                    da = {}
-#		            da['x'] = start_dt + (end_dt - start_dt)/2
+                    da = {} # tmp_summary を表示する位置を微調整
                     if Hdt_N/Row < 1:
                         da['x'] = start_dt + datetime.timedelta(weeks=0, days=0, hours=3*(Row/Hdt_N), minutes=0, seconds=0, milliseconds=0, microseconds=0)
                     else:
                         da['x'] = start_dt + (  (end_dt - start_dt)/2 )
-#MOTO                        da['x'] = start_dt + datetime.timedelta(weeks=0, days=0, hours=5*(Row), minutes=0, seconds=0, milliseconds=0, microseconds=0)
 
                     if str(df_sig.loc[n]['label']) == "リング":
                         da['x'] = start_dt + datetime.timedelta(weeks=0, days=0, hours=8, minutes=0, seconds=0, milliseconds=0, microseconds=0)
@@ -335,7 +326,7 @@ while True:
                         description = ev['description']
                         tmp_summary = "♦" + tmp_summary   #"<em>★</em>" + tmp_summary
                     except Exception as e:
-                        print('No descripton!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!	')
+                        print('', end="")
 
                     da['text'] = tmp_summary
 # DAME	            da['bbox'] = dict(boxstyle="rarrow,pad=0.3", fc="cyan", ec="b", lw=2)
@@ -360,7 +351,7 @@ while True:
                     try:
                         description = ev['description']
                     except Exception as e:
-                        print('No descripton!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!	')
+                        print('', end="")
                     else:
                         #print('descripton OK	')
                         da['x'] = start_dt + \
@@ -521,8 +512,8 @@ while True:
 	"""
 
 
-#	shiftNum = 0 - now.weekday() 	#月曜日が0で日曜日が6	0は目標とする曜日でMondya曜日の意味。
-    shiftNum = 1 - now.weekday()  # 月曜日が0で日曜日が6	1は目標とする曜日でTuesday曜日の意味。
+    shiftNum = 0 - now.weekday() 	#月曜日が0で日曜日が6	0は目標とする曜日でMondya曜日の意味。
+#    shiftNum = 1 - now.weekday()  # 月曜日が0で日曜日が6	1は目標とする曜日でTuesday曜日の意味。
     print('now.weekday()   ' + str(now.weekday()))
     print('shiftNum   ' + str(shiftNum))
     shiftNum = shiftNum+7 if shiftNum < 0 else shiftNum
@@ -534,37 +525,33 @@ while True:
     next = datetime.datetime(next.year, next.month, next.day, 10, 0, 0)
     print('next   ' + str(next))
 
-    fig.update_layout(shapes=[
-#        dict(type='line', yref='paper', y0=-1, y1=1, xref='x', x0=now, x1=now,
-#             fillcolor="black", opacity=0.5, line=dict(color="yellow", width=1, dash="solid")),
-
-#        dict(type='line', yref='paper', y0=0, y1=1, xref='x', x0=now, x1=now,
-#             fillcolor="greenyellow", opacity=0.5, line=dict(color="yellow", width=5, dash="dot")),
-
-        dict(type='line', yref='paper', y0=-0.01, y1=1.01, xref='x', x0=next+datetime.timedelta(weeks=0, days=-21, hours=0, minutes=0, seconds=0, milliseconds=0, microseconds=0), x1=next +
-             datetime.timedelta(weeks=0, days=-21, hours=0, minutes=0, seconds=0, milliseconds=0, microseconds=0), fillcolor="greenyellow", opacity=1.0, line=dict(color="yellow", width=3, dash="solid")),
-        dict(type='line', yref='paper', y0=-0.01, y1=1.01, xref='x', x0=next+datetime.timedelta(weeks=0, days=-14, hours=0, minutes=0, seconds=0, milliseconds=0, microseconds=0), x1=next +
-             datetime.timedelta(weeks=0, days=-14, hours=0, minutes=0, seconds=0, milliseconds=0, microseconds=0), fillcolor="greenyellow", opacity=1.0, line=dict(color="yellow", width=3, dash="solid")),
-
-        dict(type='line', yref='paper', y0=-0.01, y1=1.01, xref='x', x0=next+datetime.timedelta(weeks=0, days=-7, hours=0, minutes=0, seconds=0, milliseconds=0, microseconds=0), x1=next +
-             datetime.timedelta(weeks=0, days=-7, hours=0, minutes=0, seconds=0, milliseconds=0, microseconds=0), fillcolor="greenyellow", opacity=1.0, line=dict(color="yellow", width=3, dash="solid")),
-        dict(type='line', yref='paper', y0=-0.01, y1=1.01, xref='x', x0=next, x1=next,
-             fillcolor="greenyellow", opacity=1.0, line=dict(color="yellow", width=3, dash="solid")),
-        dict(type='line', yref='paper', y0=-0.01, y1=1.01, xref='x', x0=next+datetime.timedelta(weeks=0, days=7, hours=0, minutes=0, seconds=0, milliseconds=0, microseconds=0), x1=next +
-             datetime.timedelta(weeks=0, days=7, hours=0, minutes=0, seconds=0, milliseconds=0, microseconds=0), fillcolor="greenyellow", opacity=1.0, line=dict(color="yellow", width=3, dash="solid")),
-        dict(type='line', yref='paper', y0=-0.01, y1=1.01, xref='x', x0=next+datetime.timedelta(weeks=0, days=14, hours=0, minutes=0, seconds=0, milliseconds=0, microseconds=0), x1=next +
-             datetime.timedelta(weeks=0, days=14, hours=0, minutes=0, seconds=0, milliseconds=0, microseconds=0), fillcolor="greenyellow", opacity=1.0, line=dict(color="yellow", width=3, dash="solid")),
-
-        #	    dict(type= 'line', yref= 'paper', y0= 0, y1= 1, xref= 'x', x0= next+datetime.timedelta(weeks=0, days=-7, hours=0, minutes=0, seconds=0, milliseconds=0, microseconds=0), x1= next+datetime.timedelta(weeks=0, days=-7, hours=0, minutes=0, seconds=0, milliseconds=0, microseconds=0), fillcolor="greenyellow", opacity=1.0, line=dict(color="gray", width=1, dash="dot")),
-        #	    dict(type= 'line', yref= 'paper', y0= 0, y1= 1, xref= 'x', x0= next, x1= next, fillcolor="greenyellow", opacity=1.0, line=dict(color="gray", width=1, dash="dot")),
-        #	    dict(type= 'line', yref= 'paper', y0= 0, y1= 1, xref= 'x', x0= next+datetime.timedelta(weeks=0, days=7, hours=0, minutes=0, seconds=0, milliseconds=0, microseconds=0), x1= next+datetime.timedelta(weeks=0, days=7, hours=0, minutes=0, seconds=0, milliseconds=0, microseconds=0), fillcolor="greenyellow", opacity=1.0, line=dict(color="gray", width=1, dash="dot")),
-        #	    dict(type= 'line', yref= 'paper', y0= 0, y1= 1, xref= 'x', x0= next+datetime.timedelta(weeks=0, days=14, hours=0, minutes=0, seconds=0, milliseconds=0, microseconds=0), x1= next+datetime.timedelta(weeks=0, days=14, hours=0, minutes=0, seconds=0, milliseconds=0, microseconds=0), fillcolor="greenyellow", opacity=1.0, line=dict(color="gray", width=1, dash="dot")),
-
-        #	    dict(type= 'line', yref= 'paper', y0= 0, y1= 1, xref= 'x', x0= now + datetime.timedelta(days=7), x1= now + datetime.timedelta(days=7), fillcolor="gray", opacity=0.5 )
-    ],
-        #	template='plotly_dark',
+#===  一週間おきに黄色い線を付ける  ===================================================
+    line_style = dict(color="yellow", width=3, dash="solid")
+    shape_base = dict(
+        type='line', 
+        yref='paper', 
+        y0=-0.01, 
+        y1=1.01, 
+        xref='x', 
+        fillcolor="greenyellow", 
+        opacity=1.0, 
+        line=line_style
+    )
+    # 0日後から70日後まで（7日刻み）のtimedeltaを作成
+    day_offsets = range(-1000, 1000, 7) 
+    shapes_list = [
+        dict(
+            shape_base, 
+            x0=next + datetime.timedelta(days=offset), 
+            x1=next + datetime.timedelta(days=offset)
+        )
+        for offset in day_offsets
+    ]
+    fig.update_layout(
+        shapes=shapes_list,
         margin=dict(r=1, t=1, b=10, l=1)
     )
+#======================================================
 
     fig.update_xaxes(range=[sta, sto])
     fig.update_yaxes(range=[-0.7, 3.7])
@@ -583,8 +570,7 @@ while True:
 		plt.axes(axis)
 		print('### Updated	###  '  + str(axis))
 	"""
-    plotly.offline.plot(
-        fig, filename='gantt-group-tasks-together.html', auto_open=False)
+
     
     if args.unten:
         print('<<< 画像表示中...    ', end="")
@@ -602,7 +588,9 @@ while True:
             print(f"画像の回転中にエラーが発生しました: {e}")
         print(' 完了 >>>')
         os._exit(0)
-    
+
+    plotly.offline.plot(
+        fig, filename='gantt-group-tasks-together.html', auto_open=False)
     print('### Updated END	###  ')
 
     src='C:\me\ical_to_ganto\gantt-group-tasks-together.html'

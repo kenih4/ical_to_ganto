@@ -2,7 +2,7 @@ gantt-group-tasks-together.html
 calendar-icon_31857.ico
 .venv/
 .vscode/
-test.py
+test*.py
 Memo.txt
 *.txt
 *.png
