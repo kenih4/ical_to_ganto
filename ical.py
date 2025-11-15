@@ -286,30 +286,27 @@ while True:
                         charsize = 15
                     else:  # User
                         print("DUMMY :	"+tmp_summary)
-#                        tmp_summary = '<span style="font-family:游明朝 Medium; color: ' + str(str(df_sig.loc[n]['annote_color']).replace("1", "").strip().splitlines()[0]) + ';text-decoration: blink;      text-shadow: 0px 0px 2px #000">' + tmp_summary + '</span>'
 
                     print(str(start_dt) + " ~ " + str(end_dt) + " :	" + tmp_summary)
                     d["Resource"] = tmp_summary
                     d["Complete"] = n  # str(summary)
 
-
-                    if "BL-study" in tmp_summary:
+                    if str(df_sig.loc[n]['label']) == "運":
+                        colors[tmp_summary] = '#%02X%02X%02X' % (200,0,0) # 運は表示されない。ical.xlsxの下(SCSS+)の方から順に表示され、ギリギリ施設調整が見える
+                    elif str(df_sig.loc[n]['label']) == "リング":
+                        colors[tmp_summary] =   '#%02X%02X%02X' % (130,130,130)
+                    elif str(df_sig.loc[n]['label']) == "施設調整":
+                        colors[tmp_summary] = '#%02X%02X%02X' % (200,127,80) 
+                    elif "BL-study" in tmp_summary:
                         colors[tmp_summary] = '#%02X%02X%02X' % (random.randint(50, 50), random.randint(10, 10), 255)
                     elif "BL調整" in tmp_summary:
                         colors[tmp_summary] = '#%02X%02X%02X' % (random.randint(50, 50), random.randint(50, 50), 255)
                     elif "加速器調整" in tmp_summary:
                         colors[tmp_summary] = '#%02X%02X%02X' % (130, 130, 130)
-                    elif str(df_sig.loc[n]['label']) == "運":
-                        colors[tmp_summary] = '#%02X%02X%02X' % (0,0,0)
-                    elif str(df_sig.loc[n]['label']) == "リング":
-                        colors[tmp_summary] = '#%02X%02X%02X' % (130,130,130)
-                    elif str(df_sig.loc[n]['label']) == "施設調整":
-                        colors[tmp_summary] = '#%02X%02X%02X' % (55,127,200)#(255,127,80) #色指定したけど変わらず、とういうか色が付かない。そういえば運転責任者も色が付かない。なんか設定があるんだっけ？？
                     else:  # User
-                        # colors[tmp_summary] = '#%02X%02X%02X' % (255, random.randint(0, 10), random.randint(0, 10))
                         colors[tmp_summary] = '#%02X%02X%02X' % (
                             205, random.randint(1, 1), random.randint(7, 7))
-
+                                            
                     da = {} # tmp_summary を表示する位置を微調整
                     if Hdt_N/Row < 1:
                         da['x'] = start_dt + datetime.timedelta(weeks=0, days=0, hours=3*(Row/Hdt_N), minutes=0, seconds=0, milliseconds=0, microseconds=0)
@@ -366,6 +363,7 @@ while True:
 
 #		            print("-------------------------------------------" + summary)
 #		            print("-------------------------------------------" + colors[summary])
+#            os._exit(0)
             m += 1
 #		    print("m = -------------------------------------------" + str(m))
 
