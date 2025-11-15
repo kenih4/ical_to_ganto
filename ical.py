@@ -29,6 +29,42 @@ import webbrowser
 import time
 import argparse
 
+import pytz
+def safe_strptime(str_dt):
+    """
+    日時（タイムゾーン付き）または日付のみの文字列をdatetime型に安全に変換する。
+    日付のみの場合、時刻は 00:00:00、タイムゾーンは JST (+09:00) を設定する。
+    """
+    str_dt = str(str_dt)
+    
+    # タイムゾーンの設定
+    tokyo_tz = pytz.timezone('Asia/Tokyo')
+    
+    # 1. タイムゾーン付きの日時フォーマットで試行
+    format_full = '%Y-%m-%d %H:%M:%S%z'
+    try:
+        # 成功した場合、既存のタイムゾーン情報を持つ datetime オブジェクトを返す
+        dt_object = datetime.datetime.strptime(str_dt, format_full)
+        return dt_object
+    
+    except ValueError:
+        # 2. 失敗した場合、日付のみのフォーマットで試行
+        format_date_only = '%Y-%m-%d'
+        try:
+            # 日付のみとしてパース。時刻は自動的に 00:00:00 になる (ここが要求通り)
+            dt_object = datetime.datetime.strptime(str_dt, format_date_only)
+            
+            # JST (+09:00) のタイムゾーン情報を付与
+            dt_object_tz = tokyo_tz.localize(dt_object)
+            
+            return dt_object_tz
+        
+        except ValueError as e:
+            # 3. どちらのフォーマットでも失敗した場合
+            print(f"エラー: '{str_dt}' は指定されたどのフォーマットにも一致しません。")
+            raise e
+
+
 """ Japanese"""
 import locale
 dt = datetime.datetime(2018, 1, 1)
@@ -37,6 +73,7 @@ print(dt.strftime('%A, %a, %B, %b'))
 locale.setlocale(locale.LC_TIME, 'ja_JP.UTF-8')
 print(locale.getlocale(locale.LC_TIME))
 print(dt.strftime('%A, %a, %B, %b'))
+
 
 
 ##################################################
@@ -154,27 +191,33 @@ while True:
         for ev in cal.walk():
 
             try:
-                start_dt_datetime = datetime.datetime.strptime(
-                    str(ev.decoded("dtstart")), '%Y-%m-%d %H:%M:%S+09:00')
+#                start_dt_datetime = datetime.datetime.strptime(
+#                    str(ev.decoded("dtstart")), '%Y-%m-%d %H:%M:%S+09:00')
+                start_dt_datetime = safe_strptime(ev.decoded("dtstart")).replace(tzinfo=None) # replace(tzinfo=None) でタイムゾーン情報を削除
             except Exception as e:
-                # print('Exception!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!	')
+                print('Exception@A  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
                 continue
-            else:
-                if (start_dt_datetime - now).days < -60:
-                    continue
-#		        else:
-#			        print('(start_dt_datetime - now).days	' + str((start_dt_datetime - now).days))
+            
+#                print(f"変換された日時: {start_dt_datetime} ({type(start_dt_datetime)})")
+#                print(f"sta: {sta} ({type(sta)})")
+            print(f"正常にパースされた日時: {start_dt_datetime}")
+            if (start_dt_datetime - sta).days < -30:#  余裕をもってstaの30日前より前のイベントから表示する
+                continue
 
             if ev.name == 'VEVENT':
-                start_dt = ev.decoded("dtstart")
-                end_dt = ev.decoded("dtend")
+#                start_dt = ev.decoded("dtstart")
+#                end_dt = ev.decoded("dtend")
+                start_dt = safe_strptime(ev.decoded("dtstart")).replace(tzinfo=None) # replace(tzinfo=None) でタイムゾーン情報を削除
+                end_dt = safe_strptime(ev.decoded("dtend")).replace(tzinfo=None) # replace(tzinfo=None) でタイムゾーン情報を削除
+
+                print(f"DEBUG:  start_dt: {start_dt} ({type(start_dt)})")
                 try:
                     #	                summary = ev['summary'].encode('utf-8')
                     summary = ev['summary']
 #		            description =  ev['description']
 #		            description =  ev.decoded("description")
                 except Exception as e:
-                    print('Exception!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!	')
+                    print('Exception@B  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!	')
                 else:
                     #		            print(str(start_dt) + " ~ " + str(end_dt) + " :	" + str(summary))
 
@@ -248,8 +291,8 @@ while True:
 #                        tmp_summary = '<span style="font-family:游明朝 Medium; color: ' + str(str(df_sig.loc[n]['annote_color']).replace("1", "").strip().splitlines()[0]) + ';text-decoration: blink;      text-shadow: 1px 1px 0px #111">' + tmp_summary + '</span>'
                     """
 
-
-                    if (now.astimezone(JST) - start_dt).total_seconds() > 0 and (now.astimezone(JST) - end_dt).total_seconds() < 0:
+#                    if (now.astimezone(JST) - start_dt).total_seconds() > 0 and (now.astimezone(JST) - end_dt).total_seconds() < 0:
+                    if (now - start_dt).total_seconds() > 0 and (now - end_dt).total_seconds() < 0:
                         print("NOW")
                         tmp_summary = '<span style="font-family:游明朝 Medium; color: ' + str(str(df_sig.loc[n]['annote_color']).replace("1", "").strip().splitlines()[0]) + ';text-decoration: blink;      text-shadow: -2px -2px 1px #000, 2px 2px 1px #000, -2px 2px 1px #000, 2px -2px 1px #000;">' + tmp_summary + '</span>'
                     else:
@@ -331,7 +374,8 @@ while True:
                     da['textangle'] = -90
 #                    da['font'] = dict(size=charsize, family='serif', color=str(str(df_sig.loc[n]['annote_color']).replace("1", "").strip().splitlines()[0]))
                     da['font'] = dict(size=charsize, family='游明朝', color=str(str(df_sig.loc[n]['annote_color']).replace("1", "").strip().splitlines()[0]))
-                    if (now.astimezone(JST) - start_dt).total_seconds() > 0 and (now.astimezone(JST) - end_dt).total_seconds() < 0:
+                    #if (now.astimezone(JST) - start_dt).total_seconds() > 0 and (now.astimezone(JST) - end_dt).total_seconds() < 0:
+                    if (now - start_dt).total_seconds() > 0 and (now - end_dt).total_seconds() < 0:
                         print("NOW")
                         da['textangle'] = -100
 
@@ -362,10 +406,9 @@ while True:
                         # annots.append(da)
 
 #		            print("-------------------------------------------" + summary)
-#		            print("-------------------------------------------" + colors[summary])
-#            os._exit(0)
+#		            print("-------------------------------------------" + colors[summary])           
             m += 1
-#		    print("m = -------------------------------------------" + str(m))
+#            print("m = -------------------------------------------" + str(m))
 
 ##############################
             da = {}
@@ -464,6 +507,7 @@ while True:
 			colors['Marker'] = '#%02X%02X%02X' % (255,0,n)
 			first_flg=1					
 		"""
+#        if n==1: os._exit(0)
         print("-------------------------------------------")
 
 #		print(df)
