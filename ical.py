@@ -32,6 +32,39 @@ import argparse
 from tkinter import messagebox
 import pytz
 
+def get_next_monday():
+    # 1. 現在の日付と時刻を取得
+    today = datetime.datetime.now().date()
+    
+    # 2. 今日の曜日を取得 (月曜日は0、日曜日は6)
+    # Pythonのdatetime.weekday()は月曜日を0として、日曜日に6を割り当てます
+    today_weekday = today.weekday()
+    
+    # 3. 次の月曜日までの日数を計算
+    # 0 (月) の場合は +7 日 (一週間後)
+    # 1 (火) の場合は +6 日
+    # 2 (水) の場合は +5 日
+    # 3 (木) の場合は +4 日
+    # 4 (金) の場合は +3 日
+    # 5 (土) の場合は +2 日
+    # 6 (日) の場合は +1 日
+    # 計算式: (7 - today_weekday) % 7
+    # ただし、今日が月曜日(0)の場合は (7 - 0) % 7 = 0 となり今日を指してしまうため、
+    # 0の場合は強制的に7にする、または +7 して % 7 の結果が 0 のとき 7 にする
+    days_until_monday = (7 - today_weekday) % 7
+    
+    # 今日が月曜日だった場合 (days_until_monday = 0) は、
+    # 次の月曜日（一週間後）を指すように 7 を加える
+    if days_until_monday == 0:
+        days_until_monday = 7
+
+    # 4. 次の月曜日の日付を計算
+    next_monday_date = today + datetime.timedelta(days=days_until_monday)
+    
+    # 5. 日付を午前0時のdatetimeオブジェクトに変換して返す
+    next_monday_datetime = datetime.datetime.combine(next_monday_date, datetime.datetime.min.time())
+    
+    return next_monday_datetime
 
 def safe_strptime(str_dt):
     """
@@ -192,24 +225,20 @@ while True:
         for ev in cal.walk():
 
             try:
-                start_dt_datetime = safe_strptime(ev.decoded("dtstart")).replace(
+                start_dt = safe_strptime(ev.decoded("dtstart")).replace(
+                    tzinfo=None)  # replace(tzinfo=None) でタイムゾーン情報を削除
+                end_dt = safe_strptime(ev.decoded("dtend")).replace(
                     tzinfo=None)  # replace(tzinfo=None) でタイムゾーン情報を削除
             except Exception as e:
                 #print('Exception@A  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
                 continue
 
-            if (start_dt_datetime - sta).days < -30:  # 余裕をもってstaの30日前より前のイベントから表示する
+            if (start_dt > sto):    #　sta~stoの範囲だけピックアップ    start_dt のほうが sto よりも未来の日付だった場合には True
                 continue
-#            print(f"変換された日時: {start_dt_datetime} ({type(start_dt_datetime)})")
+            if (sta > end_dt ):
+                continue
 
             if ev.name == 'VEVENT':
-                start_dt = safe_strptime(ev.decoded("dtstart")).replace(
-                    tzinfo=None)  # replace(tzinfo=None) でタイムゾーン情報を削除
-                end_dt = safe_strptime(ev.decoded("dtend")).replace(
-                    tzinfo=None)  # replace(tzinfo=None) でタイムゾーン情報を削除
-                
-#                print(str(start_dt) + " ~ " + str(end_dt) + " :	" + str(summary))
-
                 d = {}
                 d["Task"] = str(df_sig.loc[n]['label'])
                 d["Start"] = start_dt
@@ -506,20 +535,12 @@ while True:
                              'showticklabels': True,
                              'ticks':""})
 	"""
-
-    shiftNum = -1 - now.weekday()  # 月曜日が0で日曜日が6	0は目標とする曜日でMondya曜日の意味。 なぜか-1しないといけない。。
-    print('now.weekday()   ' + str(now.weekday()))
-    print('shiftNum   ' + str(shiftNum))
-    shiftNum = shiftNum+7 if shiftNum < 0 else shiftNum
-    print('shiftNum   ' + str(shiftNum))
-    print('Next Monday  ' + str(shiftNum))
-    next = now+datetime.timedelta(weeks=0, days=shiftNum, hours=0,
-                                  minutes=0, seconds=0, milliseconds=0, microseconds=0)
-    print('next   ' + str(next))
-    next = datetime.datetime(next.year, next.month, next.day, 10, 0, 0)
-    print('next   ' + str(next))
-
+    
 # ===  一週間おきに黄色い線を付ける  ===================================================
+    next_monday = get_next_monday()
+    print(f"次の月曜日の日時: {next_monday}")
+    next = datetime.datetime(next_monday.year, next_monday.month, next_monday.day, 10, 0, 0) #とりあえず1年前の月曜日から1週間刻みで線を引く
+    print('<<< 一週間おきに黄色い線を付ける...    ', end="")
     line_style = dict(color="yellow", width=3, dash="solid")
     shape_base = dict(
         type='line',
@@ -532,7 +553,7 @@ while True:
         line=line_style
     )
     # 0日後から70日後まで（7日刻み）のtimedeltaを作成
-    day_offsets = range(-1000, 1000, 7)
+    day_offsets = range(-700, 700, 7) #  range(-1000, 1000, 7) だと-1000日後から7日ずつ増えてってしまう、、、
     shapes_list = [
         dict(
             shape_base,
@@ -545,11 +566,13 @@ while True:
         shapes=shapes_list,
         margin=dict(r=1, t=1, b=10, l=1)
     )
+    print(' 完了 >>>')
 # ======================================================
 
+    print('<<< fig.update_...    ', end="")
     fig.update_xaxes(range=[sta, sto])
     fig.update_yaxes(range=[-0.7, 3.7])
-
+    print(' 完了 >>>')
 
 # fig['layout'].update( xaxis = dict( tickformat="%d %B(%a)", tickmode = 'linear', dtick = 24 * 60 * 60 * 1000 ))
 # fig['layout'].update( xaxis = dict( tickformat="%m/%d", tickmode = 'linear', dtick = 604800000 ) )
