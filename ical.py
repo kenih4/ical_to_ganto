@@ -3,7 +3,7 @@
 #   -u オプションを付けると「運転集計用に表示する範囲をユニットの開始終了にした」　が、ローカルに置いたHTMLファイルではブラウザ上でjavascriptを実行してくれる拡張機能「Tampermonky」が動いてくれないので、画像にしてから回転させる処理を入れた。
 #
 # ical.pywにする時、一番下の二行をコメントアウトする！
-
+    
 # Formatter     Shift+Alt+F
 
 import locale
@@ -31,6 +31,79 @@ import time
 import argparse
 from tkinter import messagebox
 import pytz
+
+
+def check_schedule_overlap(df):
+    """
+    DataFrame内で同じTaskを持つスケジュールの時間重複をチェックし、警告を出力する関数。
+
+    Args:
+        df (pd.DataFrame): スケジュールデータを含むデータフレーム。
+    """
+    
+    # 処理前にdatetime型であることを確認 (必要に応じてコメントアウトを外す)
+    # df['Start'] = pd.to_datetime(df['Start'])
+    # df['Finish'] = pd.to_datetime(df['Finish'])
+
+    # 結果を格納する空のリスト
+    overlap_list = []
+
+    # Taskでグループ化
+    grouped = df.groupby('Task')
+
+    for Task, group in grouped:
+        # グループ内のスケジュール数が1以下の場合は重複の可能性なし
+        if len(group) < 2:
+            continue
+
+        # グループ内の全てのペアを比較（itertools.combinationsを使うと効率的）
+        from itertools import combinations
+        
+        # DataFrameのインデックス（行識別子）でペアを作成
+        for idx1, idx2 in combinations(group.index, 2):
+            
+            # スケジュールA (idx1)
+            start1 = group.loc[idx1, 'Start']
+            finish1 = group.loc[idx1, 'Finish']
+            schedule1 = group.loc[idx1, 'Resource']
+
+            # スケジュールB (idx2)
+            start2 = group.loc[idx2, 'Start']
+            finish2 = group.loc[idx2, 'Finish']
+            schedule2 = group.loc[idx2, 'Resource']
+
+            # --- 重複判定ロジック ---
+            # Aの終了がBの開始より後 AND Aの開始がBの終了より前
+            # 終了時刻と開始時刻が同じ場合は重複とみなさない（排他的に処理）
+            if (finish1 > start2) and (start1 < finish2):
+                messagebox.showerror('エラー', '重複が見つかった')
+                # 重複が見つかった場合の警告メッセージを作成
+                warning_msg = (
+                    f"⚠️ 警告: Task '{Task}' で時間重複が検出されました。\n"
+                    f"  - スケジュール1: '{schedule1}' ({start1} から {finish1} まで)\n"
+                    f"  - スケジュール2: '{schedule2}' ({start2} から {finish2} まで)"
+                )
+                
+                # 標準のwarningsモジュールを使って警告を出す
+                warnings.warn(warning_msg, UserWarning)
+                
+                # 重複リストに追加（重複したスケジュール名とTaskを記録）
+                overlap_list.append({
+                    'Task': Task,
+                    'Schedule_1': schedule1,
+                    'Schedule_2': schedule2,
+                    'Start_1': start1,
+                    'Finish_1': finish1,
+                    'Start_2': start2,
+                    'Finish_2': finish2,
+                })
+
+    if not overlap_list:
+        print("✅ 全てのスケジュールで時間の重複はありませんでした。")
+        messagebox.showinfo('OK', '全てのスケジュールで時間の重複はありませんでした。')
+    
+    return pd.DataFrame(overlap_list)
+
 
 def get_next_monday():
     # 1. 現在の日付と時刻を取得
@@ -189,7 +262,7 @@ class SigInfo:
 sig = [SigInfo() for _ in range(len(df_sig))]
 
 
-tmp_summary_before = "test"
+
 
 JST = datetime.timezone(datetime.timedelta(hours=+9), 'JST')
 
@@ -212,7 +285,7 @@ while True:
         sta = now + datetime.timedelta(days=-3)
         sto = now + datetime.timedelta(days=23)
 
-    df = []
+    tlist = []
     annots = []
     colors = {}
 
@@ -240,13 +313,13 @@ while True:
 
             if ev.name == 'VEVENT':
                 d = {}
+                tlist.append(d)
                 d["Task"] = str(df_sig.loc[n]['label'])
                 d["Start"] = start_dt
                 d["Finish"] = end_dt
 
                 tmp_summary = str(ev['summary']).replace(' ', '') # ev['summary'].encode('utf-8')
 
-                df.append(d)
                 charsize = 20
                 onerowhour = 12  # 　1行の時間巾　文字サイズcharsizeを20とすると12時間（1シフト分）くらい　ブラウザで見た感じ
                 Hdt_N = ((end_dt - start_dt).total_seconds() /
@@ -315,8 +388,8 @@ while True:
 
                 print(str(start_dt) + " ~ " +
                       str(end_dt) + "   [" + str(df_sig.loc[n]['label']) + "]    " + re.sub('<.*?>', '', tmp_summary))
-                d["Resource"] = tmp_summary
-                d["Complete"] = n  # str(summary)
+                d["Resource"] = tmp_summary # 必須     状態「Resource」に文字として与えられた場合は色分けで表示
+                d["Complete"] = n  # なくてもいい  進捗状態率「Complete」が数字として与えられた場合にはグラデーションで表示
 
                 if str(df_sig.loc[n]['label']) == "運":
                     # 運は表示されない。ical.xlsxの下(SCSS+)の方から順に表示され、ギリギリ施設調整が見える
@@ -368,7 +441,7 @@ while True:
                     print("NOW")
                     da['textangle'] = -100
 
-                tmp_summary_before = tmp_summary
+
 
                 annots.append(da)
 
@@ -387,7 +460,7 @@ while True:
                     da['textangle'] = -90
                     da['font'] = dict(color=str(
                         str(df_sig.loc[n]['annote_color']).replace("1", "").strip().splitlines()[0]))
-
+                
 # print("-------------------------------------------" + summary)
 # print("-------------------------------------------" + colors[summary])
             m += 1
@@ -493,14 +566,20 @@ while True:
 #        if n==1: os._exit(0)
         print("-------------------------------------------")
 
-# print(df)
-# print("-------------------------------------------")
-# print(colors)
+#    print(tlist)
+    #/ ~~~  テスト中 tlistをDataFrameに格納して、DataFrame内で同じTaskを持つスケジュールの時間重複をチェックし、警告を出力
+    if args.unten:
+        column_names = ['Task', 'Start', 'Finish', 'Resource', 'Complete']
+        df = pd.DataFrame(tlist, columns=column_names)
+        #print(df.loc[:, ['Task', 'Start', 'Finish', 'Resource', 'Complete']])
+        overlap_df = check_schedule_overlap(df)
+        # ~~~  テスト中 tlistをDataFrameに格納 /
+    print("-------------------------------------------")
 
 
 # fig = ff.create_gantt-group-tasks-together(df, colors=colors, index_col='Resource', title='Schedule',
 #                      show_colorbar=False, bar_width=0.495, width=1300, height=600, showgrid_x=True, showgrid_y=False, group_tasks=True)
-    fig = ff.create_gantt(df, colors=colors, index_col='Resource', title='Schedule',
+    fig = ff.create_gantt(tlist, colors=colors, index_col='Resource', title='Schedule',
                           show_colorbar=False, bar_width=0.495, width=1550, height=850, showgrid_x=True, showgrid_y=False, group_tasks=True)
 
 # fig = ff.create_gantt(df, colors=colors, index_col='Resource', title='Schedule',
