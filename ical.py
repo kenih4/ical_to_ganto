@@ -31,7 +31,39 @@ import time
 import argparse
 from tkinter import messagebox
 import pytz
+import warnings
 
+##################################################
+parser = argparse.ArgumentParser(description='ファイル処理のプログラム。')
+# 2. 引数の追加
+# 位置引数 (必須)
+parser.add_argument('config_file_setting',
+                    help='入力として使用するファイルパスを指定します。')
+parser.add_argument('config_file_sig',
+                    help='入力として使用するファイルパスを指定します。')
+parser.add_argument('-v', '--verbose',
+                    action='store_true',
+                    help='詳細な処理情報を出力します。')
+parser.add_argument('-u', '--unten',
+                    action='store_true',
+                    help='運転集計用に、出力するユニットの期間を表示します。')
+parser.add_argument('--limit',
+                    type=int,
+                    default=10,
+                    help='テスト')
+args = parser.parse_args()
+if args.verbose:
+    print("✅ 詳細モード (verbose) が有効です。")
+else:
+    print("❌ 標準モードで実行します。")
+if args.unten:
+    print("✅ 運転集計モード (unten) が有効です。")
+else:
+    print("❌ 標準モードで実行します。")
+print(f"📘 入力ファイル1: {args.config_file_setting}")
+print(f"📘 入力ファイル2: {args.config_file_sig}")
+print(f"🔢 処理制限数: {args.limit}")
+##################################################
 
 def check_schedule_overlap(df):
     """
@@ -99,8 +131,8 @@ def check_schedule_overlap(df):
                 })
 
     if not overlap_list:
-        print("✅ 全てのスケジュールで時間の重複はありませんでした。")
-        messagebox.showinfo('OK', '全てのスケジュールで時間の重複はありませんでした。')
+        print("✅ 同じTaskでのスケジュールで時間の重複はありませんでした。")
+        messagebox.showinfo('OK', '同じTaskでのスケジュールで時間の重複はありませんでした。')
     
     return pd.DataFrame(overlap_list)
 
@@ -183,37 +215,6 @@ print(locale.getlocale(locale.LC_TIME))
 print(dt.strftime('%A, %a, %B, %b'))
 
 
-##################################################
-parser = argparse.ArgumentParser(description='ファイル処理のプログラム。')
-# 2. 引数の追加
-# 位置引数 (必須)
-parser.add_argument('config_file_setting',
-                    help='入力として使用するファイルパスを指定します。')
-parser.add_argument('config_file_sig',
-                    help='入力として使用するファイルパスを指定します。')
-parser.add_argument('-v', '--verbose',
-                    action='store_true',
-                    help='詳細な処理情報を出力します。')
-parser.add_argument('-u', '--unten',
-                    action='store_true',
-                    help='運転集計用に、出力するユニットの期間を表示します。')
-parser.add_argument('--limit',
-                    type=int,
-                    default=10,
-                    help='テスト')
-args = parser.parse_args()
-if args.verbose:
-    print("✅ 詳細モード (verbose) が有効です。")
-else:
-    print("❌ 標準モードで実行します。")
-if args.unten:
-    print("✅ 運転集計モード (unten) が有効です。")
-else:
-    print("❌ 標準モードで実行します。")
-print(f"📘 入力ファイル1: {args.config_file_setting}")
-print(f"📘 入力ファイル2: {args.config_file_sig}")
-print(f"🔢 処理制限数: {args.limit}")
-##################################################
 
 df_set = pd.read_excel(args.config_file_setting,
                        sheet_name="setting", header=None, index_col=0)
@@ -296,22 +297,26 @@ while True:
         cal = Calendar.from_ical(s.icaldata)
         m = 0
         for ev in cal.walk():
-
-            try:
-                start_dt = safe_strptime(ev.decoded("dtstart")).replace(
-                    tzinfo=None)  # replace(tzinfo=None) でタイムゾーン情報を削除
-                end_dt = safe_strptime(ev.decoded("dtend")).replace(
-                    tzinfo=None)  # replace(tzinfo=None) でタイムゾーン情報を削除
-            except Exception as e:
-                #print('Exception@A  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-                continue
-
-            if (start_dt > sto):    #　sta~stoの範囲だけピックアップ    start_dt のほうが sto よりも未来の日付だった場合には True
-                continue
-            if (sta > end_dt ):
-                continue
-
             if ev.name == 'VEVENT':
+
+                try:
+                    start_dt = safe_strptime(ev.decoded("dtstart")).replace(
+                        tzinfo=None)  # replace(tzinfo=None) でタイムゾーン情報を削除
+                    end_dt = safe_strptime(ev.decoded("dtend")).replace(
+                        tzinfo=None)  # replace(tzinfo=None) でタイムゾーン情報を削除
+                except Exception as e:
+                    print('Exception@A  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' + str(ev.decoded("dtstart")) + ' ~ ' + str(ev.decoded("dtend")))
+                    continue
+
+                if (start_dt > sto):    #　sta~stoの範囲だけピックアップ    start_dt のほうが sto よりも未来の日付だった場合には True
+                    continue
+                if (sta > end_dt ):
+                    continue
+                
+                if start_dt.time() == datetime.time(0, 0, 0) or end_dt.time() == datetime.time(0, 0, 0):                    
+                    if args.unten:
+                        messagebox.showwarning('Warning', f"⚠️ 警告: 日時 {start_dt} または、{end_dt} の時刻部分が 00:00:00 です。")
+
                 d = {}
                 tlist.append(d)
                 d["Task"] = str(df_sig.loc[n]['label'])
@@ -571,9 +576,12 @@ while True:
     if args.unten:
         column_names = ['Task', 'Start', 'Finish', 'Resource', 'Complete']
         df = pd.DataFrame(tlist, columns=column_names)
-        #print(df.loc[:, ['Task', 'Start', 'Finish', 'Resource', 'Complete']])
+        df['Resource'] = df['Resource'].str.replace(r'<[^>]*>', '', regex=True) # HTMLタグを削除
+#        df['Resource'] = df['Resource'].replace('Osaka', 'Osaka2')
+        print(df.loc[:, ['Task', 'Start', 'Finish', 'Resource', 'Complete']])
         overlap_df = check_schedule_overlap(df)
-        # ~~~  テスト中 tlistをDataFrameに格納 /
+        #os._exit(0)
+        # ~~~  テスト中/
     print("-------------------------------------------")
 
 
