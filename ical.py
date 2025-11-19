@@ -197,7 +197,7 @@ def safe_strptime(str_dt):
 
             # JST (+09:00) のタイムゾーン情報を付与
             dt_object_tz = tokyo_tz.localize(dt_object)
-            print(f"情報: '{str_dt}' は日付のみのフォーマットとして解釈され、時刻は 00:00:00、タイムゾーンは JST (+09:00) に設定されました。")
+            #print(f"情報: '{str_dt}' は日付のみのフォーマットとして解釈され、時刻は 00:00:00、タイムゾーンは JST (+09:00) に設定されました。")
             return dt_object_tz
 
         except ValueError as e:
@@ -278,7 +278,7 @@ while True:
         with open(r"C:\me\unten\OperationSummary\dt_end.txt", mode='r', encoding="UTF-8") as f:
             buff_dt_end = f.read()
         sta = datetime.datetime.strptime(buff_dt_beg, "%Y/%m/%d %H:%M")
-        sta = sta + datetime.timedelta(days=-1)
+        sta = sta + datetime.timedelta(days=-2) # 余裕もって、1日前から表示
         sto = datetime.datetime.strptime(buff_dt_end, "%Y/%m/%d %H:%M")
         sto = sto + datetime.timedelta(days=2)
     else:
@@ -298,6 +298,27 @@ while True:
         m = 0
         for ev in cal.walk():
             if ev.name == 'VEVENT':
+        
+                # --- 判別部分 ---
+                if isinstance(ev.decoded("dtstart"), datetime.datetime):
+                    pass
+#                    print(f"✅ 日付と時刻が含まれています: {ev.decoded("dtstart")} (型: {type(ev.decoded("dtstart"))})")
+                    # 例: タイムゾーン情報があるかチェック
+#                    if ev.decoded("dtstart").tzinfo is not None and ev.decoded("dtstart").tzinfo.utcoffset(ev.decoded("dtstart")) is not None:
+#                        print("   > タイムゾーン情報が含まれています。")
+#                    else:
+#                        print("   > タイムゾーン情報はありません (Naive Datetime)。")                        
+                elif isinstance(ev.decoded("dtstart"), datetime.date):
+                    #print(f"📅 日付のみです: {ev.decoded("dtstart")} (型: {type(ev.decoded("dtstart"))})")
+                    if (ev.decoded("dtstart") > sto.date()) or (sta.date() > ev.decoded("dtend")):
+                        continue
+                    else:
+                        print(f"📅 日付のみです: {ev.decoded("dtstart")} (型: {type(ev.decoded("dtstart"))})")                    
+                        if args.unten:
+                            messagebox.showwarning('Warning', f"⚠️ 警告！: {ev.decoded("dtstart")}   時刻情報がありません")                    
+                else:
+                    print(f"❓ その他の型です: {ev.decoded("dtstart")} (型: {type(ev.decoded("dtstart"))})")
+
 
                 try:
                     start_dt = safe_strptime(ev.decoded("dtstart")).replace(
@@ -312,10 +333,6 @@ while True:
                     continue
                 if (sta > end_dt ):
                     continue
-                
-                if start_dt.time() == datetime.time(0, 0, 0) or end_dt.time() == datetime.time(0, 0, 0):                    
-                    if args.unten:
-                        messagebox.showwarning('Warning', f"⚠️ 警告: 日時 {start_dt} または、{end_dt} の時刻部分が 00:00:00 です。")
 
                 d = {}
                 tlist.append(d)
@@ -573,6 +590,7 @@ while True:
 
 #    print(tlist)
     #/ ~~~  テスト中 tlistをDataFrameに格納して、DataFrame内で同じTaskを持つスケジュールの時間重複をチェックし、警告を出力
+#    os._exit(0)
     if args.unten:
         column_names = ['Task', 'Start', 'Finish', 'Resource', 'Complete']
         df = pd.DataFrame(tlist, columns=column_names)
