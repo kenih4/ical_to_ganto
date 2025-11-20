@@ -3,8 +3,9 @@
 #   -u オプションを付けると「運転集計用に表示する範囲をユニットの開始終了にした」　が、ローカルに置いたHTMLファイルではブラウザ上でjavascriptを実行してくれる拡張機能「Tampermonky」が動いてくれないので、画像にしてから回転させる処理を入れた。
 #
 # ical.pywにする時、一番下の二行をコメントアウトする！
-    
+
 # Formatter     Shift+Alt+F
+# Ctrl + Shift + P (Windows)
 
 import locale
 import requests
@@ -65,6 +66,7 @@ print(f"📘 入力ファイル2: {args.config_file_sig}")
 print(f"🔢 処理制限数: {args.limit}")
 ##################################################
 
+
 def check_schedule_overlap(df):
     """
     DataFrame内で同じTaskを持つスケジュールの時間重複をチェックし、警告を出力する関数。
@@ -72,7 +74,7 @@ def check_schedule_overlap(df):
     Args:
         df (pd.DataFrame): スケジュールデータを含むデータフレーム。
     """
-    
+
     # 処理前にdatetime型であることを確認 (必要に応じてコメントアウトを外す)
     # df['Start'] = pd.to_datetime(df['Start'])
     # df['Finish'] = pd.to_datetime(df['Finish'])
@@ -90,10 +92,10 @@ def check_schedule_overlap(df):
 
         # グループ内の全てのペアを比較（itertools.combinationsを使うと効率的）
         from itertools import combinations
-        
+
         # DataFrameのインデックス（行識別子）でペアを作成
         for idx1, idx2 in combinations(group.index, 2):
-            
+
             # スケジュールA (idx1)
             start1 = group.loc[idx1, 'Start']
             finish1 = group.loc[idx1, 'Finish']
@@ -115,10 +117,10 @@ def check_schedule_overlap(df):
                     f"  - スケジュール1: '{schedule1}' ({start1} から {finish1} まで)\n"
                     f"  - スケジュール2: '{schedule2}' ({start2} から {finish2} まで)"
                 )
-                
+
                 # 標準のwarningsモジュールを使って警告を出す
                 warnings.warn(warning_msg, UserWarning)
-                
+
                 # 重複リストに追加（重複したスケジュール名とTaskを記録）
                 overlap_list.append({
                     'Task': Task,
@@ -132,19 +134,19 @@ def check_schedule_overlap(df):
 
     if not overlap_list:
         print("✅ 同じTaskでのスケジュールで時間の重複はありませんでした。")
-        messagebox.showinfo('OK', '同じTaskでのスケジュールで時間の重複はありませんでした。')
-    
+        #messagebox.showinfo('OK', '同じTaskでのスケジュールで時間の重複はありませんでした。')
+
     return pd.DataFrame(overlap_list)
 
 
 def get_next_monday():
     # 1. 現在の日付と時刻を取得
     today = datetime.datetime.now().date()
-    
+
     # 2. 今日の曜日を取得 (月曜日は0、日曜日は6)
     # Pythonのdatetime.weekday()は月曜日を0として、日曜日に6を割り当てます
     today_weekday = today.weekday()
-    
+
     # 3. 次の月曜日までの日数を計算
     # 0 (月) の場合は +7 日 (一週間後)
     # 1 (火) の場合は +6 日
@@ -157,7 +159,7 @@ def get_next_monday():
     # ただし、今日が月曜日(0)の場合は (7 - 0) % 7 = 0 となり今日を指してしまうため、
     # 0の場合は強制的に7にする、または +7 して % 7 の結果が 0 のとき 7 にする
     days_until_monday = (7 - today_weekday) % 7
-    
+
     # 今日が月曜日だった場合 (days_until_monday = 0) は、
     # 次の月曜日（一週間後）を指すように 7 を加える
     if days_until_monday == 0:
@@ -165,11 +167,13 @@ def get_next_monday():
 
     # 4. 次の月曜日の日付を計算
     next_monday_date = today + datetime.timedelta(days=days_until_monday)
-    
+
     # 5. 日付を午前0時のdatetimeオブジェクトに変換して返す
-    next_monday_datetime = datetime.datetime.combine(next_monday_date, datetime.datetime.min.time())
-    
+    next_monday_datetime = datetime.datetime.combine(
+        next_monday_date, datetime.datetime.min.time())
+
     return next_monday_datetime
+
 
 def safe_strptime(str_dt):
     """
@@ -197,7 +201,7 @@ def safe_strptime(str_dt):
 
             # JST (+09:00) のタイムゾーン情報を付与
             dt_object_tz = tokyo_tz.localize(dt_object)
-            #print(f"情報: '{str_dt}' は日付のみのフォーマットとして解釈され、時刻は 00:00:00、タイムゾーンは JST (+09:00) に設定されました。")
+            # print(f"情報: '{str_dt}' は日付のみのフォーマットとして解釈され、時刻は 00:00:00、タイムゾーンは JST (+09:00) に設定されました。")
             return dt_object_tz
 
         except ValueError as e:
@@ -213,7 +217,6 @@ print(dt.strftime('%A, %a, %B, %b'))
 locale.setlocale(locale.LC_TIME, 'ja_JP.UTF-8')
 print(locale.getlocale(locale.LC_TIME))
 print(dt.strftime('%A, %a, %B, %b'))
-
 
 
 df_set = pd.read_excel(args.config_file_setting,
@@ -263,8 +266,6 @@ class SigInfo:
 sig = [SigInfo() for _ in range(len(df_sig))]
 
 
-
-
 JST = datetime.timezone(datetime.timedelta(hours=+9), 'JST')
 
 while True:
@@ -278,7 +279,7 @@ while True:
         with open(r"C:\me\unten\OperationSummary\dt_end.txt", mode='r', encoding="UTF-8") as f:
             buff_dt_end = f.read()
         sta = datetime.datetime.strptime(buff_dt_beg, "%Y/%m/%d %H:%M")
-        sta = sta + datetime.timedelta(days=-2) # 余裕もって、1日前から表示
+        sta = sta + datetime.timedelta(days=-2)  # 余裕もって、2日前から表示
         sto = datetime.datetime.strptime(buff_dt_end, "%Y/%m/%d %H:%M")
         sto = sto + datetime.timedelta(days=2)
     else:
@@ -296,193 +297,186 @@ while True:
         # print(s.icaldata)
         cal = Calendar.from_ical(s.icaldata)
         m = 0
-        for ev in cal.walk():
-            if ev.name == 'VEVENT':
-        
-                # --- 判別部分 ---
-                if isinstance(ev.decoded("dtstart"), datetime.datetime):
-                    pass
-#                    print(f"✅ 日付と時刻が含まれています: {ev.decoded("dtstart")} (型: {type(ev.decoded("dtstart"))})")
-                    # 例: タイムゾーン情報があるかチェック
-#                    if ev.decoded("dtstart").tzinfo is not None and ev.decoded("dtstart").tzinfo.utcoffset(ev.decoded("dtstart")) is not None:
-#                        print("   > タイムゾーン情報が含まれています。")
-#                    else:
-#                        print("   > タイムゾーン情報はありません (Naive Datetime)。")                        
-                elif isinstance(ev.decoded("dtstart"), datetime.date):
-                    #print(f"📅 日付のみです: {ev.decoded("dtstart")} (型: {type(ev.decoded("dtstart"))})")
-                    if (ev.decoded("dtstart") > sto.date()) or (sta.date() > ev.decoded("dtend")):
-                        continue
-                    else:
-                        print(f"📅 日付のみです: {ev.decoded("dtstart")} (型: {type(ev.decoded("dtstart"))})")                    
-                        if args.unten:
-                            messagebox.showwarning('Warning', f"⚠️ 警告！: {ev.decoded("dtstart")}   時刻情報がありません")                    
-                else:
-                    print(f"❓ その他の型です: {ev.decoded("dtstart")} (型: {type(ev.decoded("dtstart"))})")
+        for ev in cal.walk('VEVENT'):  # VEVENTのみを処理
 
-
-                try:
-                    start_dt = safe_strptime(ev.decoded("dtstart")).replace(
-                        tzinfo=None)  # replace(tzinfo=None) でタイムゾーン情報を削除
-                    end_dt = safe_strptime(ev.decoded("dtend")).replace(
-                        tzinfo=None)  # replace(tzinfo=None) でタイムゾーン情報を削除
-                except Exception as e:
-                    print('Exception@A  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' + str(ev.decoded("dtstart")) + ' ~ ' + str(ev.decoded("dtend")))
+            if isinstance(ev.decoded("dtstart"), datetime.datetime):
+                pass
+            elif isinstance(ev.decoded("dtstart"), datetime.date):
+                # print(f"📅 日付のみです: {ev.decoded("dtstart")} (型: {type(ev.decoded("dtstart"))})")
+                if (ev.decoded("dtstart") > sto.date()) or (sta.date() > ev.decoded("dtend")):
                     continue
-
-                if (start_dt > sto):    #　sta~stoの範囲だけピックアップ    start_dt のほうが sto よりも未来の日付だった場合には True
-                    continue
-                if (sta > end_dt ):
-                    continue
-
-                d = {}
-                tlist.append(d)
-                d["Task"] = str(df_sig.loc[n]['label'])
-                d["Start"] = start_dt
-                d["Finish"] = end_dt
-
-                tmp_summary = str(ev['summary']).replace(' ', '') # ev['summary'].encode('utf-8')
-
-                charsize = 20
-                onerowhour = 12  # 　1行の時間巾　文字サイズcharsizeを20とすると12時間（1シフト分）くらい　ブラウザで見た感じ
-                Hdt_N = ((end_dt - start_dt).total_seconds() /
-                         3600) / onerowhour
-
-                Mojisu = 17  # ＊文字以上なら改行する　Default
-
-                if Hdt_N != 0:
-                    Mojisu = Mojisu/Hdt_N  # 文字が小さかったら、より長い文字数を納められるので
                 else:
-                    Hdt_N = 1
+                    print(
+                        f"📅 日付のみです: {ev.decoded("dtstart")} (型: {type(ev.decoded("dtstart"))})")
+                    if args.unten:
+                        messagebox.showwarning(
+                            'Warning', f"⚠️ 警告！: {ev.decoded("dtstart")}   時刻情報がありません")
+            else:
+                print(
+                    f"❓ その他の型です: {ev.decoded("dtstart")} (型: {type(ev.decoded("dtstart"))})")
 
-                if "Seed" in tmp_summary:
-                    print("SEED")
-                    tmp_summary += "SEED"
+            try:
+                start_dt = safe_strptime(ev.decoded("dtstart")).replace(
+                    tzinfo=None)  # replace(tzinfo=None) でタイムゾーン情報を削除
+                end_dt = safe_strptime(ev.decoded("dtend")).replace(
+                    tzinfo=None)  # replace(tzinfo=None) でタイムゾーン情報を削除
+            except Exception as e:
+                print('Exception@A  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' +
+                      str(ev.decoded("dtstart")) + ' ~ ' + str(ev.decoded("dtend")))
+                continue
 
-                tmp_summary = re.sub(
-                    "（.+?）", "", tmp_summary)  # カッコで囲まれた部分を消す
-                if len(tmp_summary) > Mojisu:  # ＊文字以上なら改行する
-                    tmp_summary = tmp_summary.replace(
-                        "BL-study", "BL-study<br>")
-                    tmp_summary = tmp_summary.replace(
-                        "BLstudy", "BLstudy<br>")
-                    tmp_summary = tmp_summary.replace("G", "G<br>")
-                    tmp_summary = tmp_summary.replace("BL調整", "BL調整<br>")
+            if (start_dt > sto):  # 　sta~stoの範囲だけピックアップ    start_dt のほうが sto よりも未来の日付だった場合には True  sta定義しているところで数日余裕持ってるので注意
+                continue
+            if (sta > end_dt):
+                continue
 
-                tmp_summary = tmp_summary.rstrip('<br>')
-                tmp_summary = tmp_summary.replace("/30Hz", "")
-                tmp_summary = tmp_summary.replace("/60Hz", "")
-                tmp_summary = tmp_summary.replace("SEED", "<i>SEED</i>")
+            d = {}
+            tlist.append(d)
+            d["Task"] = str(df_sig.loc[n]['label'])
+            d["Start"] = start_dt
+            d["Finish"] = end_dt
 
-                if (now - start_dt).total_seconds() > 0 and (now - end_dt).total_seconds() < 0:
-                    print("NOW")
-                    tmp_summary = '<span style="font-family:游明朝 Medium; color: ' + str(str(df_sig.loc[n]['annote_color']).replace("1", "").strip().splitlines(
-                    )[0]) + ';text-decoration: blink;      text-shadow: -2px -2px 1px #000, 2px 2px 1px #000, -2px 2px 1px #000, 2px -2px 1px #000;">' + tmp_summary + '</span>'
-                else:
-                    tmp_summary = '<span style="font-family:游明朝 Medium; color: ' + str(str(df_sig.loc[n]['annote_color']).replace(
-                        "1", "").strip().splitlines()[0]) + ';text-decoration: blink;      text-shadow: 0px 0px 2px #000">' + tmp_summary + '</span>'
+            tmp_summary = str(ev['summary']).replace(
+                ' ', '')  # ev['summary'].encode('utf-8')
 
+            charsize = 20
+            onerowhour = 12  # 　1行の時間巾　文字サイズcharsizeを20とすると12時間（1シフト分）くらい　ブラウザで見た感じ
+            Hdt_N = ((end_dt - start_dt).total_seconds() /
+                     3600) / onerowhour
 
+            Mojisu = 17  # ＊文字以上なら改行する　Default
 
-                Row = tmp_summary.count('<br>')+1  # 行数
+            if Hdt_N != 0:
+                Mojisu = Mojisu/Hdt_N  # 文字が小さかったら、より長い文字数を納められるので
+            else:
+                Hdt_N = 1
 
-                if Hdt_N/Row < 1:  # 12時間（1シフト分）より短い期間だったら文字サイズを小さくする
-                    charsize = charsize * Hdt_N/Row
-                    tmp_summary = '<b>' + tmp_summary + '</b>'
-                if charsize < 1:
-                    charsize = 1
+            if "Seed" in tmp_summary:
+                print("SEED")
+                tmp_summary += "SEED"
 
-                if "BL" in tmp_summary:
-                    print("", end="")
-#                    tmp_summary = '<span style="font-family:游明朝 Medium; color: ' + str(str(df_sig.loc[n]['annote_color']).replace("1", "").strip().splitlines()[0]) + ';text-decoration: blink;      text-shadow: 0px 0px 2px #000">' + tmp_summary + '</span>'
-                elif "加速器調整" in tmp_summary:
-                    charsize = 21
-#                    tmp_summary = '<span style="font-family:游明朝 Medium; color: ' + str(str(df_sig.loc[n]['annote_color']).replace("1", "").strip().splitlines()[0]) + ';text-decoration: blink;      text-shadow: 0px 0px 2px #000">' + tmp_summary + '</span>'
-                elif str(df_sig.loc[n]['label']) == "運":
-                    tmp_summary = tmp_summary.replace("・", "/")
-                    charsize = 27
-#                    tmp_summary = '<span style="font-family:游明朝 Medium; color: ' + str(str(df_sig.loc[n]['annote_color']).replace("1", "").strip().splitlines()[0]) + ';text-decoration: blink;      text-shadow: -2px -2px 1px #000, 2px 2px 1px #000, -2px 2px 1px #000, 2px -2px 1px #000;">' + tmp_summary + '</span>'
-                elif str(df_sig.loc[n]['label']) == "リング":
-                    tmp_summary = tmp_summary.replace("(Ring)", "")
-                    tmp_summary = tmp_summary.replace("変更", "変更<br>")
-                    charsize = 15
-                else:  # User
-                    print("", end="")
+            tmp_summary = re.sub(
+                "（.+?）", "", tmp_summary)  # カッコで囲まれた部分を消す
+            if len(tmp_summary) > Mojisu:  # ＊文字以上なら改行する
+                tmp_summary = tmp_summary.replace(
+                    "BL-study", "BL-study<br>")
+                tmp_summary = tmp_summary.replace(
+                    "BLstudy", "BLstudy<br>")
+                tmp_summary = tmp_summary.replace("G", "G<br>")
+                tmp_summary = tmp_summary.replace("BL調整", "BL調整<br>")
 
-                print(str(start_dt) + " ~ " +
-                      str(end_dt) + "   [" + str(df_sig.loc[n]['label']) + "]    " + re.sub('<.*?>', '', tmp_summary))
-                d["Resource"] = tmp_summary # 必須     状態「Resource」に文字として与えられた場合は色分けで表示
-                d["Complete"] = n  # なくてもいい  進捗状態率「Complete」が数字として与えられた場合にはグラデーションで表示
+            tmp_summary = tmp_summary.rstrip('<br>')
+            tmp_summary = tmp_summary.replace("/30Hz", "")
+            tmp_summary = tmp_summary.replace("/60Hz", "")
+            tmp_summary = tmp_summary.replace("SEED", "<i>SEED</i>")
 
-                if str(df_sig.loc[n]['label']) == "運":
-                    # 運は表示されない。ical.xlsxの下(SCSS+)の方から順に表示され、ギリギリ施設調整が見える
-                    colors[tmp_summary] = '#%02X%02X%02X' % (0, 0, 0)
-                elif str(df_sig.loc[n]['label']) == "リング":
-                    colors[tmp_summary] = '#%02X%02X%02X' % (130, 130, 130)
-                elif str(df_sig.loc[n]['label']) == "施設調整":
-                    colors[tmp_summary] = '#%02X%02X%02X' % (200, 127, 80)
-                elif "BL-study" in tmp_summary:
-                    colors[tmp_summary] = '#%02X%02X%02X' % (
-                        random.randint(50, 50), random.randint(10, 10), 255)
-                elif "BL調整" in tmp_summary:
-                    colors[tmp_summary] = '#%02X%02X%02X' % (
-                        random.randint(50, 50), random.randint(50, 50), 255)
-                elif "加速器調整" in tmp_summary:
-                    colors[tmp_summary] = '#%02X%02X%02X' % (130, 130, 130)
-                else:  # User
-                    colors[tmp_summary] = '#%02X%02X%02X' % (
-                        205, random.randint(1, 1), random.randint(7, 7))
+            if (now - start_dt).total_seconds() > 0 and (now - end_dt).total_seconds() < 0:
+                print("NOW")
+                tmp_summary = '<span style="font-family:游明朝 Medium; color: ' + str(str(df_sig.loc[n]['annote_color']).replace("1", "").strip().splitlines(
+                )[0]) + ';text-decoration: blink;      text-shadow: -2px -2px 1px #000, 2px 2px 1px #000, -2px 2px 1px #000, 2px -2px 1px #000;">' + tmp_summary + '</span>'
+            else:
+                tmp_summary = '<span style="font-family:游明朝 Medium; color: ' + str(str(df_sig.loc[n]['annote_color']).replace(
+                    "1", "").strip().splitlines()[0]) + ';text-decoration: blink;      text-shadow: 0px 0px 2px #000">' + tmp_summary + '</span>'
 
-                da = {}  # tmp_summary を表示する位置を微調整
-                if Hdt_N/Row < 1:
-                    da['x'] = start_dt + datetime.timedelta(weeks=0, days=0, hours=3*(
-                        Row/Hdt_N), minutes=0, seconds=0, milliseconds=0, microseconds=0)
-                else:
-                    da['x'] = start_dt + ((end_dt - start_dt)/2)
+            Row = tmp_summary.count('<br>')+1  # 行数
 
-                if str(df_sig.loc[n]['label']) == "リング":
-                    da['x'] = start_dt + datetime.timedelta(
-                        weeks=0, days=0, hours=8, minutes=0, seconds=0, milliseconds=0, microseconds=0)
+            if Hdt_N/Row < 1:  # 12時間（1シフト分）より短い期間だったら文字サイズを小さくする
+                charsize = charsize * Hdt_N/Row
+                tmp_summary = '<b>' + tmp_summary + '</b>'
+            if charsize < 1:
+                charsize = 1
 
-                da['y'] = float(df_sig.loc[n]['annote_y'])
+            if "BL" in tmp_summary:
+                print("", end="")
+#                tmp_summary = '<span style="font-family:游明朝 Medium; color: ' + str(str(df_sig.loc[n]['annote_color']).replace("1", "").strip().splitlines()[0]) + ';text-decoration: blink;      text-shadow: 0px 0px 2px #000">' + tmp_summary + '</span>'
+            elif "加速器調整" in tmp_summary:
+                charsize = 21
+#                tmp_summary = '<span style="font-family:游明朝 Medium; color: ' + str(str(df_sig.loc[n]['annote_color']).replace("1", "").strip().splitlines()[0]) + ';text-decoration: blink;      text-shadow: 0px 0px 2px #000">' + tmp_summary + '</span>'
+            elif str(df_sig.loc[n]['label']) == "運":
+                tmp_summary = tmp_summary.replace("・", "/")
+                charsize = 27
+#                tmp_summary = '<span style="font-family:游明朝 Medium; color: ' + str(str(df_sig.loc[n]['annote_color']).replace("1", "").strip().splitlines()[0]) + ';text-decoration: blink;      text-shadow: -2px -2px 1px #000, 2px 2px 1px #000, -2px 2px 1px #000, 2px -2px 1px #000;">' + tmp_summary + '</span>'
+            elif str(df_sig.loc[n]['label']) == "リング":
+                tmp_summary = tmp_summary.replace("(Ring)", "")
+                tmp_summary = tmp_summary.replace("変更", "変更<br>")
+                charsize = 15
+            else:  # User
+                print("", end="")
 
-                try:
-                    description = ev['description']
-                    tmp_summary = "♦" + tmp_summary  # "<em>★</em>" + tmp_summary
-                except Exception as e:
-                    print('', end="")
+            print(str(start_dt) + " ~ " +
+                  str(end_dt) + "   [" + str(df_sig.loc[n]['label']) + "]    " + re.sub('<.*?>', '', tmp_summary))
+            # 必須     状態「Resource」に文字として与えられた場合は色分けで表示
+            d["Resource"] = tmp_summary
+            d["Complete"] = n  # なくてもいい  進捗状態率「Complete」が数字として与えられた場合にはグラデーションで表示
 
-                da['text'] = tmp_summary
+            if str(df_sig.loc[n]['label']) == "運":
+                # 運は表示されない。ical.xlsxの下(SCSS+)の方から順に表示され、ギリギリ施設調整が見える
+                colors[tmp_summary] = '#%02X%02X%02X' % (0, 0, 0)
+            elif str(df_sig.loc[n]['label']) == "リング":
+                colors[tmp_summary] = '#%02X%02X%02X' % (130, 130, 130)
+            elif str(df_sig.loc[n]['label']) == "施設調整":
+                colors[tmp_summary] = '#%02X%02X%02X' % (200, 127, 80)
+            elif "BL-study" in tmp_summary:
+                colors[tmp_summary] = '#%02X%02X%02X' % (
+                    random.randint(50, 50), random.randint(10, 10), 255)
+            elif "BL調整" in tmp_summary:
+                colors[tmp_summary] = '#%02X%02X%02X' % (
+                    random.randint(50, 50), random.randint(50, 50), 255)
+            elif "加速器調整" in tmp_summary:
+                colors[tmp_summary] = '#%02X%02X%02X' % (130, 130, 130)
+            else:  # User
+                colors[tmp_summary] = '#%02X%02X%02X' % (
+                    205, random.randint(1, 1), random.randint(7, 7))
+
+            da = {}  # tmp_summary を表示する位置を微調整
+            if Hdt_N/Row < 1:
+                da['x'] = start_dt + datetime.timedelta(weeks=0, days=0, hours=3*(
+                    Row/Hdt_N), minutes=0, seconds=0, milliseconds=0, microseconds=0)
+            else:
+                da['x'] = start_dt + ((end_dt - start_dt)/2)
+
+            if str(df_sig.loc[n]['label']) == "リング":
+                da['x'] = start_dt + datetime.timedelta(
+                    weeks=0, days=0, hours=8, minutes=0, seconds=0, milliseconds=0, microseconds=0)
+
+            da['y'] = float(df_sig.loc[n]['annote_y'])
+
+            try:
+                description = ev['description']
+                tmp_summary = "♦" + tmp_summary  # "<em>★</em>" + tmp_summary
+            except Exception as e:
+                print('', end="")
+
+            da['text'] = tmp_summary
 # DAME	            da['bbox'] = dict(boxstyle="rarrow,pad=0.3", fc="cyan", ec="b", lw=2)
-                da['showarrow'] = False
+            da['showarrow'] = False
+            da['textangle'] = -90
+#            da['font'] = dict(size=charsize, family='serif', color=str(str(df_sig.loc[n]['annote_color']).replace("1", "").strip().splitlines()[0]))
+            da['font'] = dict(size=charsize, family='游明朝', color=str(
+                str(df_sig.loc[n]['annote_color']).replace("1", "").strip().splitlines()[0]))
+            # if (now.astimezone(JST) - start_dt).total_seconds() > 0 and (now.astimezone(JST) - end_dt).total_seconds() < 0:
+            if (now - start_dt).total_seconds() > 0 and (now - end_dt).total_seconds() < 0:
+                print("NOW")
+                da['textangle'] = -100
+
+            annots.append(da)
+
+            da = {}
+            try:
+                description = ev['description']
+            except Exception as e:
+                print('', end="")
+            else:
+                # print('descripton OK	')
+                da['x'] = start_dt + \
+                    (end_dt - start_dt) - (end_dt - start_dt)/4
+                da['y'] = float(df_sig.loc[n]['annote_y'])
+                da['text'] = "<i>" + str(description) + "</i>"
+                da['showarrow'] = False  # True
                 da['textangle'] = -90
-#                da['font'] = dict(size=charsize, family='serif', color=str(str(df_sig.loc[n]['annote_color']).replace("1", "").strip().splitlines()[0]))
-                da['font'] = dict(size=charsize, family='游明朝', color=str(
+                da['font'] = dict(color=str(
                     str(df_sig.loc[n]['annote_color']).replace("1", "").strip().splitlines()[0]))
-                # if (now.astimezone(JST) - start_dt).total_seconds() > 0 and (now.astimezone(JST) - end_dt).total_seconds() < 0:
-                if (now - start_dt).total_seconds() > 0 and (now - end_dt).total_seconds() < 0:
-                    print("NOW")
-                    da['textangle'] = -100
 
-
-
-                annots.append(da)
-
-                da = {}
-                try:
-                    description = ev['description']
-                except Exception as e:
-                    print('', end="")
-                else:
-                    # print('descripton OK	')
-                    da['x'] = start_dt + \
-                        (end_dt - start_dt) - (end_dt - start_dt)/4
-                    da['y'] = float(df_sig.loc[n]['annote_y'])
-                    da['text'] = "<i>" + str(description) + "</i>"
-                    da['showarrow'] = False  # True
-                    da['textangle'] = -90
-                    da['font'] = dict(color=str(
-                        str(df_sig.loc[n]['annote_color']).replace("1", "").strip().splitlines()[0]))
-                
 # print("-------------------------------------------" + summary)
 # print("-------------------------------------------" + colors[summary])
             m += 1
@@ -586,20 +580,25 @@ while True:
 			first_flg=1					
 		"""
 #        if n==1: os._exit(0)
-        print("-------------------------------------------")
+        print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
 
 #    print(tlist)
-    #/ ~~~  テスト中 tlistをDataFrameに格納して、DataFrame内で同じTaskを持つスケジュールの時間重複をチェックし、警告を出力
-#    os._exit(0)
+    # / ~~~  tlistをDataFrameに格納して、DataFrame内で同じTaskを持つスケジュールの時間重複をチェックし、警告を出力
     if args.unten:
         column_names = ['Task', 'Start', 'Finish', 'Resource', 'Complete']
         df = pd.DataFrame(tlist, columns=column_names)
-        df['Resource'] = df['Resource'].str.replace(r'<[^>]*>', '', regex=True) # HTMLタグを削除
-#        df['Resource'] = df['Resource'].replace('Osaka', 'Osaka2')
-        print(df.loc[:, ['Task', 'Start', 'Finish', 'Resource', 'Complete']])
-        overlap_df = check_schedule_overlap(df)
-        #os._exit(0)
-        # ~~~  テスト中/
+        df['Resource'] = df['Resource'].str.replace(r'<[^>]*>', '', regex=True)  # HTMLタグを削除
+
+        copied_df_BL2 = df.copy()
+        copied_df_BL2['Task'] = copied_df_BL2['Task'].replace('施設調整', 'BL2') # 施設調整をBL2に変更して、施設調整とBL2の時間が重複しているかチェック
+        print(copied_df_BL2.loc[:, ['Task', 'Start', 'Finish', 'Resource', 'Complete']])
+        overlap_df = check_schedule_overlap(copied_df_BL2)
+
+        copied_df_BL3 = df.copy()
+        copied_df_BL3['Task'] = copied_df_BL3['Task'].replace('施設調整', 'BL3') # 施設調整をBL3に変更して、施設調整とBL3の時間が重複しているかチェック
+        print(copied_df_BL3.loc[:, ['Task', 'Start', 'Finish', 'Resource', 'Complete']])
+        overlap_df = check_schedule_overlap(copied_df_BL3)
+        # ~~~ /
     print("-------------------------------------------")
 
 
@@ -640,11 +639,12 @@ while True:
                              'showticklabels': True,
                              'ticks':""})
 	"""
-    
+
 # ===  一週間おきに黄色い線を付ける  ===================================================
     next_monday = get_next_monday()
     print(f"次の月曜日の日時: {next_monday}")
-    next = datetime.datetime(next_monday.year, next_monday.month, next_monday.day, 10, 0, 0) #とりあえず1年前の月曜日から1週間刻みで線を引く
+    next = datetime.datetime(next_monday.year, next_monday.month,
+                             next_monday.day, 10, 0, 0)  # とりあえず1年前の月曜日から1週間刻みで線を引く
     print('<<< 一週間おきに黄色い線を付ける...    ', end="")
     line_style = dict(color="yellow", width=3, dash="solid")
     shape_base = dict(
@@ -658,7 +658,8 @@ while True:
         line=line_style
     )
     # 0日後から70日後まで（7日刻み）のtimedeltaを作成
-    day_offsets = range(-700, 700, 7) #  range(-1000, 1000, 7) だと-1000日後から7日ずつ増えてってしまう、、、
+    # range(-1000, 1000, 7) だと-1000日後から7日ずつ増えてってしまう、、、
+    day_offsets = range(-700, 700, 7)
     shapes_list = [
         dict(
             shape_base,
