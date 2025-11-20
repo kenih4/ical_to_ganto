@@ -279,9 +279,9 @@ while True:
         with open(r"C:\me\unten\OperationSummary\dt_end.txt", mode='r', encoding="UTF-8") as f:
             buff_dt_end = f.read()
         sta = datetime.datetime.strptime(buff_dt_beg, "%Y/%m/%d %H:%M")
-        sta = sta + datetime.timedelta(days=-2)  # 余裕もって、2日前から表示
+        sta = sta + datetime.timedelta(days=0)  # 余裕もって、2日前から表示
         sto = datetime.datetime.strptime(buff_dt_end, "%Y/%m/%d %H:%M")
-        sto = sto + datetime.timedelta(days=2)
+        sto = sto + datetime.timedelta(days=0)
     else:
         print("❌ 標準モードで実行します。")
         sta = now + datetime.timedelta(days=-3)
@@ -588,16 +588,20 @@ while True:
         column_names = ['Task', 'Start', 'Finish', 'Resource', 'Complete']
         df = pd.DataFrame(tlist, columns=column_names)
         df['Resource'] = df['Resource'].str.replace(r'<[^>]*>', '', regex=True)  # HTMLタグを削除
+        
+        condition = (df['Task'] == 'BL2') | (df['Task'] == '施設調整')                # 1. 抽出条件を作成: df['Name'] が 'Alice' と等しい行は True、それ以外は False となる Series を生成
+        df_BL2 = df[condition] # 2. 条件を使って行を抽出
+        df_BL2_sorted = df_BL2.sort_values(by='Start', ascending=True)  # 'Start' 列で昇順にソート  
+        print(df_BL2_sorted.loc[:, ['Task', 'Start', 'Finish', 'Resource', 'Complete']])
+        df_BL2['Task'] = df_BL2['Task'].replace('施設調整', 'BL2') # 施設調整をBL2に変更して、施設調整とBL2の時間が重複しているかチェック
+        overlap_df = check_schedule_overlap(df_BL2)
 
-        copied_df_BL2 = df.copy()
-        copied_df_BL2['Task'] = copied_df_BL2['Task'].replace('施設調整', 'BL2') # 施設調整をBL2に変更して、施設調整とBL2の時間が重複しているかチェック
-        print(copied_df_BL2.loc[:, ['Task', 'Start', 'Finish', 'Resource', 'Complete']])
-        overlap_df = check_schedule_overlap(copied_df_BL2)
-
-        copied_df_BL3 = df.copy()
-        copied_df_BL3['Task'] = copied_df_BL3['Task'].replace('施設調整', 'BL3') # 施設調整をBL3に変更して、施設調整とBL3の時間が重複しているかチェック
-        print(copied_df_BL3.loc[:, ['Task', 'Start', 'Finish', 'Resource', 'Complete']])
-        overlap_df = check_schedule_overlap(copied_df_BL3)
+        condition = (df['Task'] == 'BL3') | (df['Task'] == '施設調整')                # 1. 抽出条件を作成: df['Name'] が 'Alice' と等しい行は True、それ以外は False となる Series を生成
+        df_BL3 = df[condition] # 2. 条件を使って行を抽出
+        df_BL3_sorted = df_BL3.sort_values(by='Start', ascending=True)  # 'Start' 列で昇順にソート  
+        print(df_BL3_sorted.loc[:, ['Task', 'Start', 'Finish', 'Resource', 'Complete']])
+        df_BL3['Task'] = df_BL3['Task'].replace('施設調整', 'BL3') # 施設調整をBL3に変更して、施設調整とBL3の時間が重複しているかチェック
+        overlap_df = check_schedule_overlap(df_BL3)
         # ~~~ /
     print("-------------------------------------------")
 
@@ -711,6 +715,7 @@ while True:
         except Exception as e:
             print(f"画像の回転中にエラーが発生しました: {e}")
         print(' 完了 >>>')
+        input("プログラムは全て終了です。Enterキーを押して閉じてください...")            
         os._exit(0)
 
     plotly.offline.plot(
