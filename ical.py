@@ -94,24 +94,23 @@ def compare_dfs(df1, df2):
 
 
 def out_KEIKAKUZIKANxlsx(df,strBL):
-    #column_names = ['Task', 'Start', 'Finish', 'Resource', 'Complete']
-    #df = pd.DataFrame(tlist, columns=column_names)
-    #df['Resource'] = df['Resource'].str.replace(r'<[^>]*>', '', regex=True)  # HTMLタグを削除
-    print("DEBUG    --- " + strBL + " の計画時間 ---")
-    #print(df)
     condition = (df['Task'] == strBL) | (df['Task'] == '施設調整')   # strBL と 施設調整 の行を抽出する条件
     df_BL = df[condition]
 
     #重複チェック
-    df_BL['Task'] = df_BL['Task'].replace('施設調整', 'BL') # 施設調整をstrBLに変更して、施設調整とstrBLの時間が重複しているかチェック
-    overlap_df = check_schedule_overlap(df_BL)
+    df_BL_ov = df_BL.copy()
+    df_BL_ov['Task'] = df_BL_ov['Task'].replace('施設調整', 'BL') # 施設調整をstrBLに変更して、施設調整とstrBLの時間が重複しているかチェック
+    overlap_df = check_schedule_overlap(df_BL_ov)
         
-    df_BL_sorted = df_BL.sort_values(by='Start', ascending=True)  # 'Start' 列で昇順にソート  
+    df_BL_sorted = df_BL.sort_values(by='Start', ascending=True)  # 'Start' 列で昇順にソート
+    print("/--- ソート後 ---    ",df_BL_sorted)
+    print("/////////////////////////")
     condition_KEIKAKUZIKAN = df_BL_sorted['Resource'].str.contains('G ', na=False) | df_BL_sorted['Resource'].str.contains('FCBT', na=False) | df_BL_sorted['Resource'].str.contains('試験利用', na=False) # 'G' または 'FCBT' または '試験利用' を含む行を抽出する条件
-    df_BL_sorted.loc[condition_KEIKAKUZIKAN, 'Task'] = 'ユーザー'
+    df_BL_sorted.loc[condition_KEIKAKUZIKAN, 'Task'] = 'ユーザー' # 条件を満たす行の 'Task' 列の値を 'ユーザー' に変更
     df_BL_sorted['Resource'] = df_BL_sorted['Resource'].str.replace(r'G\s.*$', 'G', regex=True) #特定の文字列（この場合は "G "）が見つかったら、その文字列以降すべてを削除して置換
-
-    df_BL_USER = df_BL_sorted[df_BL_sorted['Task'] == 'ユーザー']
+    df_BL_USER = df_BL_sorted[
+        (df_BL_sorted['Task'] == 'ユーザー') | (df_BL_sorted['Task'] == '施設調整')
+    ]
 #    print(df_BL_USER.loc[:, ['Task', 'Start', 'Finish', 'Resource', 'Complete']])
     
     ####################################################################################
@@ -141,21 +140,21 @@ def out_KEIKAKUZIKANxlsx(df,strBL):
     # ---------------------------------------------
     if current_time < sto:
         adjustment_row_final = {
-        'Task': '調整中',
+        'Task': '利用調整',
         'Start': current_time,          # 最後のイベントの終了時刻
         'Finish': sto,           # 全体終了時刻
-        'Resource': f'テスト{adjustment_count}'
+        'Resource': f'最後のすきま埋め{adjustment_count}'
         }
         result_rows.append(adjustment_row_final)
     df_final = pd.DataFrame(result_rows)
-    print("/--- 最終的な計画時間 ---")
+    print("/--- 最終的な計画時間 ---    ",strBL)
     print(df_final)
     print("--- 最終的な計画時間 ---/")
-    df_final.to_excel(
-        f'output_' + strBL + '.xlsx',       # 出力先のファイル名
-        sheet_name=strBL, # シート名
-        index=False      # DataFrameの左側のインデックス（0, 1, 2...）を出力しない
-    )
+#    df_final.to_excel(
+#        f'output_' + strBL + '.xlsx',       # 出力先のファイル名
+#        sheet_name=strBL, # シート名
+#        index=False      # DataFrameの左側のインデックス（0, 1, 2...）を出力しない
+#    )
 
     df_KEIKAKUZIKAN = pd.read_excel(r"\\saclaopr18.spring8.or.jp\common\運転状況集計\最新\計画時間.xlsx", sheet_name=strBL.lower())
 
