@@ -33,6 +33,7 @@ import argparse
 from tkinter import messagebox
 import pytz
 import warnings
+import openpyxl
 
 ##################################################
 parser = argparse.ArgumentParser(description='ファイル処理のプログラム。')
@@ -66,6 +67,31 @@ print(f"📘 入力ファイル2: {args.config_file_sig}")
 print(f"🔢 処理制限数: {args.limit}")
 ##################################################
 
+# DataFrame 比較用関数
+def compare_dfs(df1, df2):
+    # shape の小さい方に合わせる
+    rows = min(df1.shape[0], df2.shape[0])
+    cols = min(df1.shape[1], df2.shape[1])
+
+    # 比較対象部分を切り出し（インデックス・列名は無視）
+    a = df1.iloc[:rows, :cols]
+    b = df2.iloc[:rows, :cols]
+
+    # diff: True = 違う、False = 同じ
+    diff = a.values != b.values
+
+    # 色付け
+    def highlight(x):
+        # x は DataFrame 全体
+        out = pd.DataFrame('', index=x.index, columns=x.columns)
+        for i in range(rows):
+            for j in range(cols):
+                if diff[i, j]:  # 違うセルに色付け
+                    out.iat[i, j] = 'background-color: yellow'
+        return out
+
+    return a.style.apply(highlight, axis=None)
+
 
 def out_KEIKAKUZIKANxlsx(df,strBL):
     #column_names = ['Task', 'Start', 'Finish', 'Resource', 'Complete']
@@ -83,9 +109,10 @@ def out_KEIKAKUZIKANxlsx(df,strBL):
     df_BL_sorted = df_BL.sort_values(by='Start', ascending=True)  # 'Start' 列で昇順にソート  
     condition_KEIKAKUZIKAN = df_BL_sorted['Resource'].str.contains('G ', na=False) | df_BL_sorted['Resource'].str.contains('FCBT', na=False) | df_BL_sorted['Resource'].str.contains('試験利用', na=False) # 'G' または 'FCBT' または '試験利用' を含む行を抽出する条件
     df_BL_sorted.loc[condition_KEIKAKUZIKAN, 'Task'] = 'ユーザー'
+    df_BL_sorted['Resource'] = df_BL_sorted['Resource'].str.replace(r'G\s.*$', 'G', regex=True) #特定の文字列（この場合は "G "）が見つかったら、その文字列以降すべてを削除して置換
 
     df_BL_USER = df_BL_sorted[df_BL_sorted['Task'] == 'ユーザー']
-    print(df_BL_USER.loc[:, ['Task', 'Start', 'Finish', 'Resource', 'Complete']])
+#    print(df_BL_USER.loc[:, ['Task', 'Start', 'Finish', 'Resource', 'Complete']])
     
     ####################################################################################
     # ユーザーのすき間を利用調整で埋める
@@ -121,16 +148,27 @@ def out_KEIKAKUZIKANxlsx(df,strBL):
         }
         result_rows.append(adjustment_row_final)
     df_final = pd.DataFrame(result_rows)
-    print("--- 最終的な計画時間 ---")
+    print("/--- 最終的な計画時間 ---")
     print(df_final)
+    print("--- 最終的な計画時間 ---/")
     df_final.to_excel(
         f'output_' + strBL + '.xlsx',       # 出力先のファイル名
         sheet_name=strBL, # シート名
         index=False      # DataFrameの左側のインデックス（0, 1, 2...）を出力しない
     )
 
+    df_KEIKAKUZIKAN = pd.read_excel(r"\\saclaopr18.spring8.or.jp\common\運転状況集計\最新\計画時間.xlsx", sheet_name=strBL.lower())
 
-
+    styled = compare_dfs(df_final, df_KEIKAKUZIKAN)
+    styled.to_excel(
+        '比較結果_' + strBL+ '.xlsx',
+        sheet_name=strBL,
+        engine='openpyxl'  # スタイル出力には openpyxl エンジンを推奨
+    )
+    if not os.path.exists('比較結果_' + strBL+ '.xlsx'):
+        print(f"エラー: ファイル 比較結果.xlsx が見つかりません。")
+    else:
+        os.startfile('比較結果_' + strBL+ '.xlsx')
 
 def check_schedule_overlap(df):
     """
@@ -392,7 +430,7 @@ while True:
 
             if (start_dt > sto):  # 　sta~stoの範囲だけピックアップ    start_dt のほうが sto よりも未来の日付だった場合には True  sta定義しているところで数日余裕持ってるので注意
                 continue
-            if (sta > end_dt):
+            if (sta >= end_dt):
                 continue
 
             d = {}
@@ -653,65 +691,14 @@ while True:
         column_names = ['Task', 'Start', 'Finish', 'Resource', 'Complete']
         df = pd.DataFrame(tlist, columns=column_names)
         df['Resource'] = df['Resource'].str.replace(r'<[^>]*>', '', regex=True)  # HTMLタグを削除
+#        print("--- 元のdf ---")        
+#        print(df)
+#        df['Resource'] = df['Resource'].str.partition("G ")[0] + "G "  # "G "以降を削除
+#        print("--- partitionのdf ---")        
+        print(df)
+
         out_KEIKAKUZIKANxlsx(df,'BL2')
         out_KEIKAKUZIKANxlsx(df,'BL3')
-        """
-        condition = (df['Task'] == 'BL2') | (df['Task'] == '施設調整')   # BL2 または 施設調整 の行を抽出する条件
-        df_BL2 = df[condition]
-
-        #重複チェック
-        df_BL2['Task'] = df_BL2['Task'].replace('施設調整', 'BL2') # 施設調整をBL2に変更して、施設調整とBL2の時間が重複しているかチェック
-        overlap_df = check_schedule_overlap(df_BL2)
-                
-        df_BL2_sorted = df_BL2.sort_values(by='Start', ascending=True)  # 'Start' 列で昇順にソート  
-        condition_KEIKAKUZIKAN = df_BL2_sorted['Resource'].str.contains('G ', na=False) | df_BL2_sorted['Resource'].str.contains('FCBT', na=False) | df_BL2_sorted['Resource'].str.contains('試験利用', na=False) # 'G' または 'FCBT' または '試験利用' を含む行を抽出する条件
-        df_BL2_sorted.loc[condition_KEIKAKUZIKAN, 'Task'] = 'ユーザー'
-
-        df_BL2_USER = df_BL2_sorted[df_BL2_sorted['Task'] == 'ユーザー']
-        print(df_BL2_USER.loc[:, ['Task', 'Start', 'Finish', 'Resource', 'Complete']])
-        
-        ####################################################################################
-        # ユーザーのすき間を利用調整で埋める
-        result_rows = []
-        current_time = sta
-        adjustment_count = 1
-        for index, row in df_BL2_USER.iterrows():            
-            # ---------------------------------------------
-            # 1. 前のイベント終了時刻から次のイベント開始時刻までのギャップを埋める
-            # ---------------------------------------------
-            # 現在の開始時刻（前回のFinishまたはGLOBAL_START）と次のイベントStart時刻に差があるかチェック
-            if row['Start'] > current_time:
-                # ギャップ（調整中期間）が存在する場合
-                adjustment_row = {
-                    'Task': '利用調整',
-                    'Start': current_time,              # 前のイベントの終了時刻
-                    'Finish': row['Start'],             # 次のイベントの開始時刻
-                    'Resource': f'すきま埋め{adjustment_count}' # リソース名を連番で付与
-                }
-                result_rows.append(adjustment_row)
-                adjustment_count += 1
-            result_rows.append(row.to_dict())
-            current_time = row['Finish']
-        # ---------------------------------------------
-        # 3. 最後のイベント終了時刻から GLOBAL_END までのギャップを埋める
-        # ---------------------------------------------
-        if current_time < sto:
-            adjustment_row_final = {
-                'Task': '調整中',
-                'Start': current_time,              # 最後のイベントの終了時刻
-                'Finish': sto,               # 全体終了時刻
-                'Resource': f'テスト{adjustment_count}'
-            }
-            result_rows.append(adjustment_row_final)
-        df_final = pd.DataFrame(result_rows)
-        print("--- 最終的な計画時間 ---")
-        print(df_final)
-        df_final.to_excel(
-            f'output.xlsx',           # 出力先のファイル名
-            sheet_name='Sheet1', # シート名
-            index=False          # DataFrameの左側のインデックス（0, 1, 2...）を出力しない
-        )
-        """
         ####################################################################################
 
 
