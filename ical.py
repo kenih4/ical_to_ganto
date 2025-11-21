@@ -93,7 +93,8 @@ def compare_dfs(df1, df2):
     return a.style.apply(highlight, axis=None)
 
 
-def out_KEIKAKUZIKANxlsx(df,strBL):
+def out_KEIKAKUZIKANxlsx(df: pd.DataFrame,strBL: str, sta: datetime.datetime, sto: datetime.datetime):
+    print(f"\n~~~~~~~~~~~~~~~~~~~~~~~~~ 計画時間出力処理開始    {strBL} ~~~~~~~~~~~~~~~~~~~~~~~~~")
     condition = (df['Task'] == strBL) | (df['Task'] == '施設調整')   # strBL と 施設調整 の行を抽出する条件
     df_BL = df[condition]
 
@@ -103,8 +104,7 @@ def out_KEIKAKUZIKANxlsx(df,strBL):
     overlap_df = check_schedule_overlap(df_BL_ov)
         
     df_BL_sorted = df_BL.sort_values(by='Start', ascending=True)  # 'Start' 列で昇順にソート
-    print("/--- ソート後 ---    ",df_BL_sorted)
-    print("/////////////////////////")
+    print("/----- ソート後 \n",df_BL_sorted,"\n----- ソート後 /")
     condition_KEIKAKUZIKAN = df_BL_sorted['Resource'].str.contains('G ', na=False) | df_BL_sorted['Resource'].str.contains('FCBT', na=False) | df_BL_sorted['Resource'].str.contains('試験利用', na=False) # 'G' または 'FCBT' または '試験利用' を含む行を抽出する条件
     df_BL_sorted.loc[condition_KEIKAKUZIKAN, 'Task'] = 'ユーザー' # 条件を満たす行の 'Task' 列の値を 'ユーザー' に変更
     df_BL_sorted['Resource'] = df_BL_sorted['Resource'].str.replace(r'G\s.*$', 'G', regex=True) #特定の文字列（この場合は "G "）が見つかったら、その文字列以降すべてを削除して置換
@@ -133,8 +133,11 @@ def out_KEIKAKUZIKANxlsx(df,strBL):
             }
             result_rows.append(adjustment_row)
             adjustment_count += 1
+        # ---------------------------------------------
+        # 2. 元のユーザーイベントの行を追加
+        # ---------------------------------------------
         result_rows.append(row.to_dict())
-        current_time = row['Finish']
+        current_time = row['Finish']# 処理後の時間を、現在のイベントのFinish時刻に更新
     # ---------------------------------------------
     # 3. 最後のイベント終了時刻から GLOBAL_END までのギャップを埋める
     # ---------------------------------------------
@@ -147,14 +150,23 @@ def out_KEIKAKUZIKANxlsx(df,strBL):
         }
         result_rows.append(adjustment_row_final)
     df_final = pd.DataFrame(result_rows)
-    print("/--- 最終的な計画時間 ---    ",strBL)
+    print("/----------- 最終的な計画時間    ",strBL)
+    if df_final.loc[0, 'Start'] != sta:
+        # 3. 条件を満たした場合、最初の行の 'Name' 列を 'TEST' に置換
+        # .loc[行の指定, 列の指定] = 新しい値
+        df_final.loc[0, 'Start'] = sta
+        print("❌ 最初の行の値がstaでなかったのでしたので、staに置換しました。")
+    else:
+        print(f"✅ 最初OK")
+    if df_final.loc[df_final.index.max(), 'Finish'] != sto:
+        # 3. 条件を満たした場合、最初の行の 'Name' 列を 'TEST' に置換
+        # .loc[行の指定, 列の指定] = 新しい値
+        df_final.loc[df_final.index.max(), 'Finish'] = sto
+        print("❌ 最後の行の値がstoでなかったのでしたので、stoに置換しました。")
+    else:
+        print(f"✅ 最後OK")
     print(df_final)
-    print("--- 最終的な計画時間 ---/")
-#    df_final.to_excel(
-#        f'output_' + strBL + '.xlsx',       # 出力先のファイル名
-#        sheet_name=strBL, # シート名
-#        index=False      # DataFrameの左側のインデックス（0, 1, 2...）を出力しない
-#    )
+    print("------------ 最終的な計画時間 /")
 
     df_KEIKAKUZIKAN = pd.read_excel(r"\\saclaopr18.spring8.or.jp\common\運転状況集計\最新\計画時間.xlsx", sheet_name=strBL.lower())
 
@@ -165,7 +177,7 @@ def out_KEIKAKUZIKANxlsx(df,strBL):
         engine='openpyxl'  # スタイル出力には openpyxl エンジンを推奨
     )
     if not os.path.exists('比較結果_' + strBL+ '.xlsx'):
-        print(f"エラー: ファイル 比較結果.xlsx が見つかりません。")
+        print(f"❌ ファイル 比較結果.xlsx が見つかりません。")
     else:
         os.startfile('比較結果_' + strBL+ '.xlsx')
 
@@ -696,15 +708,13 @@ while True:
 #        print("--- partitionのdf ---")        
         print(df)
 
-        out_KEIKAKUZIKANxlsx(df,'BL2')
-        out_KEIKAKUZIKANxlsx(df,'BL3')
+        out_KEIKAKUZIKANxlsx(df,'BL2',sta,sto)
+        out_KEIKAKUZIKANxlsx(df,'BL3',sta,sto)
         ####################################################################################
 
 
 
 
-        # ~~~ /
-    print("-------------------------------------------")
 
 
 # fig = ff.create_gantt-group-tasks-together(df, colors=colors, index_col='Resource', title='Schedule',
@@ -747,7 +757,7 @@ while True:
 
 # ===  一週間おきに黄色い線を付ける  ===================================================
     next_monday = get_next_monday()
-    print(f"次の月曜日の日時: {next_monday}")
+    #print(f"次の月曜日の日時: {next_monday}")
     next = datetime.datetime(next_monday.year, next_monday.month,
                              next_monday.day, 10, 0, 0)  # とりあえず1年前の月曜日から1週間刻みで線を引く
     print('<<< 一週間おきに黄色い線を付ける...    ', end="")
