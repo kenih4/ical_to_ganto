@@ -68,7 +68,7 @@ print(f"🔢 処理制限数: {args.limit}")
 ##################################################
 
 # DataFrame 比較用関数
-def compare_dfs(df1, df2):
+def compare_dfs(df1: pd.DataFrame, df2: pd.DataFrame):
     # shape の小さい方に合わせる
     rows = min(df1.shape[0], df2.shape[0])
     cols = min(df1.shape[1], df2.shape[1])
@@ -100,9 +100,9 @@ def out_KEIKAKUZIKANxlsx(df: pd.DataFrame,strBL: str, sta: datetime.datetime, st
 
     #重複チェック
     df_BL_ov = df_BL.copy()
-    df_BL_ov['Task'] = df_BL_ov['Task'].replace('施設調整', 'BL') # 施設調整をstrBLに変更して、施設調整とstrBLの時間が重複しているかチェック
+    df_BL_ov['Task'] = df_BL_ov['Task'].replace('施設調整', strBL) # 施設調整をstrBLに変更して、施設調整とstrBLの時間が重複しているかチェック
     overlap_df = check_schedule_overlap(df_BL_ov)
-        
+
     df_BL_sorted = df_BL.sort_values(by='Start', ascending=True)  # 'Start' 列で昇順にソート
     print("/----- ソート後 \n",df_BL_sorted,"\n----- ソート後 /")
     condition_KEIKAKUZIKAN = df_BL_sorted['Resource'].str.contains('G ', na=False) | df_BL_sorted['Resource'].str.contains('FCBT', na=False) | df_BL_sorted['Resource'].str.contains('試験利用', na=False) # 'G' または 'FCBT' または '試験利用' を含む行を抽出する条件
@@ -155,16 +155,27 @@ def out_KEIKAKUZIKANxlsx(df: pd.DataFrame,strBL: str, sta: datetime.datetime, st
         # 3. 条件を満たした場合、最初の行の 'Name' 列を 'TEST' に置換
         # .loc[行の指定, 列の指定] = 新しい値
         df_final.loc[0, 'Start'] = sta
-        print("❌ 最初の行の値がstaでなかったのでしたので、staに置換しました。")
+        print("💡 最初の行の値がstaでなかったのでしたので、staに置換しました。")
     else:
         print(f"✅ 最初OK")
     if df_final.loc[df_final.index.max(), 'Finish'] != sto:
         # 3. 条件を満たした場合、最初の行の 'Name' 列を 'TEST' に置換
         # .loc[行の指定, 列の指定] = 新しい値
         df_final.loc[df_final.index.max(), 'Finish'] = sto
-        print("❌ 最後の行の値がstoでなかったのでしたので、stoに置換しました。")
+        print("💡 最後の行の値がstoでなかったのでしたので、stoに置換しました。")
     else:
         print(f"✅ 最後OK")
+    # --- ユニット合計を追加する ---
+    new_row_data = {
+        'Task': ['ユニット合計'], 
+        'Start': [sta], 
+        'Finish': [sto],
+        'Resource': [''],
+        'Complete': ['']
+    }
+    column_names = ['Task', 'Start', 'Finish', 'Resource', 'Complete']
+    df_new_row = pd.DataFrame(new_row_data, columns=column_names)
+    df_final = pd.concat([df_final, df_new_row], ignore_index=True)
     print(df_final)
     print("------------ 最終的な計画時間 /")
 
@@ -181,7 +192,7 @@ def out_KEIKAKUZIKANxlsx(df: pd.DataFrame,strBL: str, sta: datetime.datetime, st
     else:
         os.startfile('比較結果_' + strBL+ '.xlsx')
 
-def check_schedule_overlap(df):
+def check_schedule_overlap(df: pd.DataFrame) -> pd.DataFrame:
     """
     DataFrame内で同じTaskを持つスケジュールの時間重複をチェックし、警告を出力する関数。
 
@@ -289,7 +300,7 @@ def get_next_monday():
     return next_monday_datetime
 
 
-def safe_strptime(str_dt):
+def safe_strptime(str_dt: str) -> datetime.datetime:
     """
     日時（タイムゾーン付き）または日付のみの文字列をdatetime型に安全に変換する。
     日付のみの場合、時刻は 00:00:00、タイムゾーンは JST (+09:00) を設定する。
