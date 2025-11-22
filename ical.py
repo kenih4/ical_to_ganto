@@ -67,7 +67,6 @@ print(f"📘 入力ファイル2: {args.config_file_sig}")
 print(f"🔢 処理制限数: {args.limit}")
 ##################################################
 
-
 def is_file_open(filepath: str) -> bool:
     """
     指定されたファイルが出力のために開かれているか（ロックされているか）をチェックします。
@@ -207,7 +206,7 @@ def out_KEIKAKUZIKANxlsx(df: pd.DataFrame,strBL: str, sta: datetime.datetime, st
     print(df_final)
     print("------------------------ 最終的な計画時間 /")
 
-    KEIKAKUZIKANxlsx = "\\saclaopr18.spring8.or.jp\common\運転状況集計\最新\計画時間.xlsx"
+    KEIKAKUZIKANxlsx = r"\\saclaopr18.spring8.or.jp\common\運転状況集計\最新\計画時間.xlsx"
     df_KEIKAKUZIKAN = pd.read_excel(KEIKAKUZIKANxlsx, sheet_name=strBL.lower())
     print(df_KEIKAKUZIKAN)
     styled = compare_dfs(df_final, df_KEIKAKUZIKAN)
@@ -225,6 +224,7 @@ def out_KEIKAKUZIKANxlsx(df: pd.DataFrame,strBL: str, sta: datetime.datetime, st
         print(f"❌ 警告: ファイル '{Hikakuxlsx}' が見つかりません。")
     else:
         os.startfile(Hikakuxlsx)
+        os.startfile(KEIKAKUZIKANxlsx)
 
 def check_schedule_overlap(df: pd.DataFrame) -> pd.DataFrame:
     """
