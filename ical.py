@@ -185,16 +185,16 @@ def out_KEIKAKUZIKANxlsx(df: pd.DataFrame,strBL: str, sta: datetime.datetime, st
         # 3. 条件を満たした場合、最初の行の 'Name' 列を 'TEST' に置換
         # .loc[行の指定, 列の指定] = 新しい値
         df_final.loc[0, 'Start'] = sta
-        print("💡 最初の行の値がstaでなかったのでしたので、staに置換しました。")
+        print("💡 最初のスケジュールがユニット開始日時と一致しなかったので置換しました。")
     else:
-        print(f"✅ 最初OK")
+        print(f"✅ 最初のスケジュールがユニット開始日時と一致")
     if df_final.loc[df_final.index.max(), 'Finish'] != sto:
         # 3. 条件を満たした場合、最初の行の 'Name' 列を 'TEST' に置換
         # .loc[行の指定, 列の指定] = 新しい値
         df_final.loc[df_final.index.max(), 'Finish'] = sto
-        print("💡 最後の行の値がstoでなかったのでしたので、stoに置換しました。")
+        print("💡 最後のスケジュールがユニット終了日時と一致しなかったので置換しました。")
     else:
-        print(f"✅ 最後OK")
+        print(f"✅ 最後のスケジュールがユニット終了日時と一致")
     
     new_row_data = {# --- ユニット合計を追加する ---
         'Task': ['ユニット合計'], 
@@ -207,7 +207,8 @@ def out_KEIKAKUZIKANxlsx(df: pd.DataFrame,strBL: str, sta: datetime.datetime, st
     print(df_final)
     print("------------------------ 最終的な計画時間 /")
 
-    df_KEIKAKUZIKAN = pd.read_excel(r"\\saclaopr18.spring8.or.jp\common\運転状況集計\最新\計画時間.xlsx", sheet_name=strBL.lower())
+    KEIKAKUZIKANxlsx = "\\saclaopr18.spring8.or.jp\common\運転状況集計\最新\計画時間.xlsx"
+    df_KEIKAKUZIKAN = pd.read_excel(KEIKAKUZIKANxlsx, sheet_name=strBL.lower())
     print(df_KEIKAKUZIKAN)
     styled = compare_dfs(df_final, df_KEIKAKUZIKAN)
 
@@ -292,7 +293,6 @@ def check_schedule_overlap(df: pd.DataFrame) -> pd.DataFrame:
 
     if not overlap_list:
         print("✅ 同じTaskでのスケジュールで時間の重複はありませんでした。")
-        #messagebox.showinfo('OK', '同じTaskでのスケジュールで時間の重複はありませんでした。')
 
     return pd.DataFrame(overlap_list)
 
@@ -866,9 +866,9 @@ while True:
                 rotated_img.show()
         except FileNotFoundError:
             print(
-                f"エラー: '{output_image_path}' が見つかりません。Plotlyでの画像生成が成功したか確認してください。")
+                f"❌ '{output_image_path}' が見つかりません。Plotlyでの画像生成が成功したか確認してください。")
         except Exception as e:
-            print(f"画像の回転中にエラーが発生しました: {e}")
+            print(f"❌ 画像の回転中にエラーが発生しました: {e}")
         print(' 完了 >>>')
         input("プログラムは全て終了です。Enterキーを押して閉じてください...")            
         os._exit(0)
