@@ -57,16 +57,42 @@ args = parser.parse_args()
 if args.verbose:
     print("✅ 詳細モード (verbose) が有効です。")
 else:
-    print("❌ 標準モードで実行します。")
+    print("💡 標準モードで実行します。")
 if args.unten:
     print("✅ 運転集計モード (unten) が有効です。")
 else:
-    print("❌ 標準モードで実行します。")
+    print("💡 標準モードで実行します。")
 print(f"📘 入力ファイル1: {args.config_file_setting}")
 print(f"📘 入力ファイル2: {args.config_file_sig}")
 print(f"🔢 処理制限数: {args.limit}")
 ##################################################
 
+
+def is_file_open(filepath: str) -> bool:
+    """
+    指定されたファイルが出力のために開かれているか（ロックされているか）をチェックします。
+    ファイルを開こうとしてエラーが発生するかどうかで判断します。
+    """
+#    if not os.path.exists(filepath):
+#        return False
+        
+    try:
+        # ファイルを読み書きモード ('r+') で開く操作を試みる
+        # Windows環境では、ロックされているとここで PermissionError が発生します
+        with open(filepath, 'r+') as f:
+            # 成功すれば、ファイルはロックされていない
+            return False
+            
+    except PermissionError:
+        # PermissionError (または IOError) が発生した場合、ファイルはロックされている可能性が高い
+        print(f"⚠️ 警告: ファイル '{filepath}'  PermissionError (または IOError)")
+        return True
+        
+    except Exception as e:
+        # その他の予期せぬエラー
+        print(f"🚨 警告: ファイル '{filepath}' その他の予期せぬエラー")
+        return True
+    
 # DataFrame 比較用関数
 def compare_dfs(df1: pd.DataFrame, df2: pd.DataFrame):
     # shape の小さい方に合わせる
@@ -80,6 +106,10 @@ def compare_dfs(df1: pd.DataFrame, df2: pd.DataFrame):
     # diff: True = 違う、False = 同じ
     diff = a.values != b.values
 
+    # --- ここで NaN 同士の diff を False にする ---
+    nan_equal = (pd.isna(a.values) & pd.isna(b.values))
+    diff = diff & ~nan_equal
+    
     # 色付け
     def highlight(x):
         # x は DataFrame 全体
@@ -150,7 +180,7 @@ def out_KEIKAKUZIKANxlsx(df: pd.DataFrame,strBL: str, sta: datetime.datetime, st
         }
         result_rows.append(adjustment_row_final)
     df_final = pd.DataFrame(result_rows)
-    print("/----------- 最終的な計画時間    ",strBL)
+    print("/----------------------- 最終的な計画時間    ",strBL)
     if df_final.loc[0, 'Start'] != sta:
         # 3. 条件を満たした場合、最初の行の 'Name' 列を 'TEST' に置換
         # .loc[行の指定, 列の指定] = 新しい値
@@ -165,32 +195,35 @@ def out_KEIKAKUZIKANxlsx(df: pd.DataFrame,strBL: str, sta: datetime.datetime, st
         print("💡 最後の行の値がstoでなかったのでしたので、stoに置換しました。")
     else:
         print(f"✅ 最後OK")
-    # --- ユニット合計を追加する ---
-    new_row_data = {
+    
+    new_row_data = {# --- ユニット合計を追加する ---
         'Task': ['ユニット合計'], 
         'Start': [sta], 
-        'Finish': [sto],
-        'Resource': [''],
-        'Complete': ['']
+        'Finish': [sto]
     }
     column_names = ['Task', 'Start', 'Finish', 'Resource', 'Complete']
     df_new_row = pd.DataFrame(new_row_data, columns=column_names)
     df_final = pd.concat([df_final, df_new_row], ignore_index=True)
     print(df_final)
-    print("------------ 最終的な計画時間 /")
+    print("------------------------ 最終的な計画時間 /")
 
     df_KEIKAKUZIKAN = pd.read_excel(r"\\saclaopr18.spring8.or.jp\common\運転状況集計\最新\計画時間.xlsx", sheet_name=strBL.lower())
-
+    print(df_KEIKAKUZIKAN)
     styled = compare_dfs(df_final, df_KEIKAKUZIKAN)
+
+    Hikakuxlsx = '比較結果_' + strBL+ '.xlsx'
+    if is_file_open(Hikakuxlsx):
+        return
+
     styled.to_excel(
-        '比較結果_' + strBL+ '.xlsx',
+        Hikakuxlsx,
         sheet_name=strBL,
         engine='openpyxl'  # スタイル出力には openpyxl エンジンを推奨
     )
-    if not os.path.exists('比較結果_' + strBL+ '.xlsx'):
-        print(f"❌ ファイル 比較結果.xlsx が見つかりません。")
+    if not os.path.exists(Hikakuxlsx):
+        print(f"❌ 警告: ファイル '{Hikakuxlsx}' が見つかりません。")
     else:
-        os.startfile('比較結果_' + strBL+ '.xlsx')
+        os.startfile(Hikakuxlsx)
 
 def check_schedule_overlap(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -398,7 +431,7 @@ while True:
     now = datetime.datetime.now()
 
     if args.unten:
-        print("✅ untenモードが有効です。")
+        print("💡 untenモードが有効です。")
         with open(r"C:\me\unten\OperationSummary\dt_beg.txt", mode='r', encoding="UTF-8") as f:
             buff_dt_beg = f.read()
         with open(r"C:\me\unten\OperationSummary\dt_end.txt", mode='r', encoding="UTF-8") as f:
@@ -408,7 +441,7 @@ while True:
         sto = datetime.datetime.strptime(buff_dt_end, "%Y/%m/%d %H:%M")
         sto = sto + datetime.timedelta(days=0)
     else:
-        print("❌ 標準モードで実行します。")
+        print("✅ 標準モードで実行します。")
         sta = now + datetime.timedelta(days=-3)
         sto = now + datetime.timedelta(days=23)
 
