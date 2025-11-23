@@ -34,6 +34,7 @@ from tkinter import messagebox
 import pytz
 import warnings
 import openpyxl
+import numpy as np
 
 ##################################################
 parser = argparse.ArgumentParser(description='ファイル処理のプログラム。')
@@ -66,6 +67,25 @@ print(f"📘 入力ファイル1: {args.config_file_setting}")
 print(f"📘 入力ファイル2: {args.config_file_sig}")
 print(f"🔢 処理制限数: {args.limit}")
 ##################################################
+
+
+def ordered_expand(df1, df2):
+    """データフレームのサイズを揃える。列順を保持しながら双方向拡張"""
+    # 行方向の統合
+    max_index = df1.index.union(df2.index)
+    
+    # 列順を保持したカラム統合
+    def preserve_order(base_columns, new_columns):
+        return list(base_columns) + [col for col in new_columns if col not in base_columns]
+    
+    # 各DFごとに列を拡張
+    df1_cols = preserve_order(df1.columns, df2.columns)
+    df2_cols = preserve_order(df2.columns, df1.columns)
+    
+    return (
+        df1.reindex(index=max_index, columns=df1_cols),
+        df2.reindex(index=max_index, columns=df2_cols)
+    )
 
 def is_file_open(filepath: str) -> bool:
     """
@@ -209,7 +229,10 @@ def out_KEIKAKUZIKANxlsx(df: pd.DataFrame,strBL: str, sta: datetime.datetime, st
     KEIKAKUZIKANxlsx = r"\\saclaopr18.spring8.or.jp\common\運転状況集計\最新\計画時間.xlsx"
     df_KEIKAKUZIKAN = pd.read_excel(KEIKAKUZIKANxlsx, sheet_name=strBL.lower())
     print(df_KEIKAKUZIKAN)
-    styled = compare_dfs(df_final, df_KEIKAKUZIKAN)
+
+    df_KEIKAKUZIKAN_expanded, df_final_expanded = ordered_expand(df_KEIKAKUZIKAN, df_final)
+
+    styled = compare_dfs(df_final_expanded, df_KEIKAKUZIKAN_expanded)#compare_dfs(df_final, df_KEIKAKUZIKAN)
 
     Hikakuxlsx = '比較結果_' + strBL+ '.xlsx'
     if is_file_open(Hikakuxlsx):
