@@ -69,6 +69,53 @@ print(f"🔢 処理制限数: {args.limit}")
 ##################################################
 
 
+def check_duplicates(df, show_details=True, columns=None):
+    """改良版：列指定可能な重複チェック関数"""
+    has_duplicates = False
+    report = []
+    
+    # 列指定のバリデーション
+    if columns is not None:
+        if isinstance(columns, str):
+            columns = [columns]
+        invalid_cols = [col for col in columns if col not in df.columns]
+        if invalid_cols:
+            print(f"⚠️ 無効な列名: {invalid_cols} はスキップされます")
+            columns = [col for col in columns if col in df.columns]
+    else:
+        columns = df.columns
+    
+    for col in columns:
+        duplicates = df[df.duplicated(subset=col, keep=False)]
+        
+        if not duplicates.empty:
+            has_duplicates = True
+            dup_values = duplicates[col].value_counts()
+            dup_list = dup_values[dup_values > 1].index.tolist()
+            
+            report.append({
+                'Column': col,
+                'Duplicated Values': dup_list,
+                'Count': len(dup_list),
+                'Example': dup_list[:3]
+            })
+    
+    # 以下既存のレポート表示処理（変更なし）
+    if has_duplicates:
+        print("🚨 重複データが検出されました！")
+        
+        if show_details:
+            print("🔍 重複詳細:")
+            for item in report:
+                print(f"列名: {item['Column']}")
+                print(f"重複値 ({item['Count']}件): {item['Example']}")
+                #print(df[df[item['Column']].isin(item['Example'])].sort_values(item['Column']))
+    else:
+        print("✅ 重複データはありません")
+    
+    return has_duplicates
+
+
 def ordered_expand(df1, df2):
     """データフレームのサイズを揃える。列順を保持しながら双方向拡張"""
     # 行方向の統合
@@ -147,13 +194,12 @@ def out_KEIKAKUZIKANxlsx(df: pd.DataFrame,strBL: str, sta: datetime.datetime, st
     condition = (df['Task'] == strBL) | (df['Task'] == '施設調整')   # strBL と 施設調整 の行を抽出する条件
     df_BL = df[condition]
 
-    #重複チェック
     df_BL_ov = df_BL.copy()
     df_BL_ov['Task'] = df_BL_ov['Task'].replace('施設調整', strBL) # 施設調整をstrBLに変更して、施設調整とstrBLの時間が重複しているかチェック
     overlap_df = check_schedule_overlap(df_BL_ov)
 
     df_BL_sorted = df_BL.sort_values(by='Start', ascending=True)  # 'Start' 列で昇順にソート
-    print("/----- ソート後 \n",df_BL_sorted,"\n----- ソート後 /")
+    #print("/----- ソート後 \n",df_BL_sorted,"\n----- ソート後 /")
     condition_KEIKAKUZIKAN = df_BL_sorted['Resource'].str.contains('G ', na=False) | df_BL_sorted['Resource'].str.contains('FCBT', na=False) | df_BL_sorted['Resource'].str.contains('試験利用', na=False) # 'G' または 'FCBT' または '試験利用' を含む行を抽出する条件
     df_BL_sorted.loc[condition_KEIKAKUZIKAN, 'Task'] = 'ユーザー' # 条件を満たす行の 'Task' 列の値を 'ユーザー' に変更
     df_BL_sorted['Resource'] = df_BL_sorted['Resource'].str.replace(r'G\s.*$', 'G', regex=True) #特定の文字列（この場合は "G "）が見つかったら、その文字列以降すべてを削除して置換
@@ -224,11 +270,12 @@ def out_KEIKAKUZIKANxlsx(df: pd.DataFrame,strBL: str, sta: datetime.datetime, st
     df_new_row = pd.DataFrame(new_row_data, columns=column_names)
     df_final = pd.concat([df_final, df_new_row], ignore_index=True)
     print(df_final)
+    check_duplicates(df_final, columns=['Resource'])  # 特定列のみチェック
     print("------------------------ 最終的な計画時間 /")
 
     KEIKAKUZIKANxlsx = r"\\saclaopr18.spring8.or.jp\common\運転状況集計\最新\計画時間.xlsx"
     df_KEIKAKUZIKAN = pd.read_excel(KEIKAKUZIKANxlsx, sheet_name=strBL.lower())
-    print(df_KEIKAKUZIKAN)
+    #print(df_KEIKAKUZIKAN)
 
     df_KEIKAKUZIKAN_expanded, df_final_expanded = ordered_expand(df_KEIKAKUZIKAN, df_final)
 
@@ -536,8 +583,7 @@ while True:
                 print("SEED")
                 tmp_summary += "SEED"
 
-            tmp_summary = re.sub(
-                "（.+?）", "", tmp_summary)  # カッコで囲まれた部分を消す
+            tmp_summary = re.sub("（.+?）", "", tmp_summary)  # カッコで囲まれた部分を消す
             if len(tmp_summary) > Mojisu:  # ＊文字以上なら改行する
                 tmp_summary = tmp_summary.replace(
                     "BL-study", "BL-study<br>")
@@ -588,7 +634,7 @@ while True:
                   str(end_dt) + "   [" + str(df_sig.loc[n]['label']) + "]    " + re.sub('<.*?>', '', tmp_summary))
             # 必須     状態「Resource」に文字として与えられた場合は色分けで表示
             d["Resource"] = tmp_summary
-            d["Complete"] = n  # なくてもいい  進捗状態率「Complete」が数字として与えられた場合にはグラデーションで表示
+            #d["Complete"] = n  # なくてもいい  進捗状態率「Complete」が数字として与えられた場合にはグラデーションで表示
 
             if str(df_sig.loc[n]['label']) == "運":
                 # 運は表示されない。ical.xlsxの下(SCSS+)の方から順に表示され、ギリギリ施設調整が見える
