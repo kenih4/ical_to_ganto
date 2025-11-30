@@ -190,7 +190,7 @@ def compare_dfs(df1: pd.DataFrame, df2: pd.DataFrame):
 
 
 def out_KEIKAKUZIKANxlsx(df: pd.DataFrame,strBL: str, sta: datetime.datetime, sto: datetime.datetime):
-    print(f"\n~~~~~~~~~~~~~~~~~~~~~~~~~ 計画時間出力処理開始    {strBL} ~~~~~~~~~~~~~~~~~~~~~~~~~")
+    print(f"\n~~~~~~~~~~~~~~~~~~~~~~~~~ 計画時間出力処理開始    {strBL} ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     condition = (df['Task'] == strBL) | (df['Task'] == '施設調整')   # strBL と 施設調整 の行を抽出する条件
     df_BL = df[condition]
 
@@ -200,7 +200,8 @@ def out_KEIKAKUZIKANxlsx(df: pd.DataFrame,strBL: str, sta: datetime.datetime, st
 
     df_BL_sorted = df_BL.sort_values(by='Start', ascending=True)  # 'Start' 列で昇順にソート
     #print("/----- ソート後 \n",df_BL_sorted,"\n----- ソート後 /")
-    condition_KEIKAKUZIKAN = df_BL_sorted['Resource'].str.contains('G ', na=False) | df_BL_sorted['Resource'].str.contains('FCBT', na=False) | df_BL_sorted['Resource'].str.contains('試験利用', na=False) # 'G' または 'FCBT' または '試験利用' を含む行を抽出する条件
+    #condition_KEIKAKUZIKAN = df_BL_sorted['Resource'].str.contains('G ', na=False) | df_BL_sorted['Resource'].str.contains('FCBT', na=False) | df_BL_sorted['Resource'].str.contains('試験利用', na=False) # 'G' または 'FCBT' または '試験利用' を含む行を抽出する条件
+    condition_KEIKAKUZIKAN = ~df_BL_sorted['Resource'].str.contains('BL|加速器調整', na=False) # BLまたは加速器調整を含まない条件
     df_BL_sorted.loc[condition_KEIKAKUZIKAN, 'Task'] = 'ユーザー' # 条件を満たす行の 'Task' 列の値を 'ユーザー' に変更
     df_BL_sorted['Resource'] = df_BL_sorted['Resource'].str.replace(r'G\s.*$', 'G', regex=True) #特定の文字列（この場合は "G "）が見つかったら、その文字列以降すべてを削除して置換
     df_BL_USER = df_BL_sorted[
@@ -245,7 +246,7 @@ def out_KEIKAKUZIKANxlsx(df: pd.DataFrame,strBL: str, sta: datetime.datetime, st
         }
         result_rows.append(adjustment_row_final)
     df_final = pd.DataFrame(result_rows)
-    print("/----------------------- 最終的な計画時間    ",strBL)
+    print("/-- 最終的な計画時間    ",strBL)
     if df_final.loc[0, 'Start'] != sta:
         # 3. 条件を満たした場合、最初の行の 'Name' 列を 'TEST' に置換
         # .loc[行の指定, 列の指定] = 新しい値
@@ -271,7 +272,7 @@ def out_KEIKAKUZIKANxlsx(df: pd.DataFrame,strBL: str, sta: datetime.datetime, st
     df_final = pd.concat([df_final, df_new_row], ignore_index=True)
     print(df_final)
     check_duplicates(df_final, columns=['Resource'])  # 特定列のみチェック
-    print("------------------------ 最終的な計画時間 /")
+    print("-- 最終的な計画時間 /")
 
     KEIKAKUZIKANxlsx = r"\\saclaopr18.spring8.or.jp\common\運転状況集計\最新\計画時間.xlsx"
     df_KEIKAKUZIKAN = pd.read_excel(KEIKAKUZIKANxlsx, sheet_name=strBL.lower())
